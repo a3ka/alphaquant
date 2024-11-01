@@ -2,7 +2,7 @@
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle2 } from "lucide-react"
+import { Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import React, { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
@@ -24,8 +24,8 @@ type PricingCardProps = {
   priceIdYearly: any
   isYearly?: boolean
   title: string
-  monthlyPrice?: number
-  yearlyPrice?: number
+  monthlyPrice?: number | null
+  yearlyPrice?: number | null
   description: string
   features: string[]
   actionLabel: string
@@ -34,11 +34,12 @@ type PricingCardProps = {
 }
 
 const PricingHeader = ({ title, subtitle }: { title: string; subtitle: string }) => (
-  <section className="text-center">
-    <h1 className={`${TITLE_TAILWIND_CLASS} mt-2 font-semibold tracking-tight dark:text-white text-gray-900`}>{title}</h1>
-    <p className="text-gray-600 dark:text-gray-400 pt-1">{subtitle}</p>
-    <br />
-  </section>
+  <div className="text-center mb-16">
+    <h2 className="text-3xl font-bold mb-4">Choose the right plan for your needs</h2>
+    <p className="text-white/70 max-w-2xl mx-auto">
+      Choose the right plan for your needs
+    </p>
+  </div>
 )
 
 const PricingSwitch = ({ onSwitch }: PricingSwitchProps) => (
@@ -61,40 +62,24 @@ const PricingSwitch = ({ onSwitch }: PricingSwitchProps) => (
 const PricingCard = ({ user, handleCheckout, isYearly, title, priceIdMonthly, priceIdYearly, monthlyPrice, yearlyPrice, description, features, actionLabel, popular, exclusive }: PricingCardProps) => {
   const router = useRouter();
   return (
-    <Card
-      className={cn(`w-72 flex flex-col justify-between py-1 ${popular ? "border-rose-400" : "border-zinc-700"} mx-auto sm:mx-0`, {
-        "animate-background-shine bg-white dark:bg-[linear-gradient(110deg,#000103,45%,#1e2631,55%,#000103)] bg-[length:200%_100%] transition-colors":
-          exclusive,
-      })}>
-      <div>
-        <CardHeader className="pb-8 pt-4">
-          {isYearly && yearlyPrice && monthlyPrice ? (
-            <div className="flex justify-between">
-              <CardTitle className="text-zinc-700 dark:text-zinc-300 text-lg">{title}</CardTitle>
-              <div
-                className={cn("px-2.5 rounded-xl h-fit text-sm py-1 bg-zinc-200 text-black dark:bg-zinc-800 dark:text-white", {
-                  "bg-gradient-to-r from-orange-400 to-rose-400 dark:text-black ": popular,
-                })}>
-                Save ${monthlyPrice * 12 - yearlyPrice}
-              </div>
-            </div>
-          ) : (
-            <CardTitle className="text-zinc-700 dark:text-zinc-300 text-lg">{title}</CardTitle>
-          )}
-          <div className="flex gap-0.5">
-            <h2 className="text-3xl font-bold">{yearlyPrice && isYearly ? "$" + yearlyPrice : monthlyPrice ? "$" + monthlyPrice : "Custom"}</h2>
-            <span className="flex flex-col justify-end text-sm mb-1">{yearlyPrice && isYearly ? "/year" : monthlyPrice ? "/month" : null}</span>
-          </div>
-          <CardDescription className="pt-1.5 h-12">{description}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          {features.map((feature: string) => (
-            <CheckItem key={feature} text={feature} />
-          ))}
-        </CardContent>
-      </div>
-      <CardFooter className="mt-2">
-        <Button
+    <Card 
+      className={cn(
+        `bg-white/5 border-white/10`,
+        {
+          'ring-2 ring-blue-500': popular,
+        }
+      )}
+    >
+      <CardHeader>
+        <CardTitle className="text-2xl mb-2">{title}</CardTitle>
+        <CardDescription className="text-white/70 mb-4">
+          {description}
+        </CardDescription>
+        <div className="text-3xl font-bold mb-6">
+          {isYearly ? `$${yearlyPrice}` : `$${monthlyPrice}`}
+          <span className="text-lg text-white/50">{isYearly ? '/year' : '/month'}</span>
+        </div>
+        <Button 
           onClick={() => {
             if (user?.id) {
               handleCheckout(isYearly ? priceIdYearly : priceIdMonthly, true)
@@ -110,23 +95,23 @@ const PricingCard = ({ user, handleCheckout, isYearly, title, priceIdMonthly, pr
               })
             }
           }}
-          className="relative inline-flex w-full items-center justify-center rounded-md bg-black text-white dark:bg-white px-6 font-medium dark:text-black transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50"
-          type="button"
+          className="w-full mb-6" 
+          variant={popular ? "default" : "outline"}
         >
-          <div className="absolute -inset-0.5 -z-10 rounded-lg bg-gradient-to-b fr om-[#c7d2fe] to-[#8678f9] opacity-75 blur" />
           {actionLabel}
         </Button>
-      </CardFooter>
+        <ul className="space-y-4">
+          {features.map((feature, index) => (
+            <li key={index} className="flex items-center">
+              <Check className="h-5 w-5 text-green-500 mr-2" />
+              <span className="text-white/70">{feature}</span>
+            </li>
+          ))}
+        </ul>
+      </CardHeader>
     </Card>
   )
 }
-
-const CheckItem = ({ text }: { text: string }) => (
-  <div className="flex gap-2">
-    <CheckCircle2 size={18} className="my-auto text-green-400" />
-    <p className="pt-0.5 text-zinc-700 dark:text-zinc-300 text-sm">{text}</p>
-  </div>
-)
 
 export default function Pricing() {
   const [isYearly, setIsYearly] = useState<boolean>(false)
@@ -166,21 +151,31 @@ export default function Pricing() {
 
   const plans = [
     {
-      title: "Basic",
-      monthlyPrice: 10,
-      yearlyPrice: 100,
+      title: "Free",
+      monthlyPrice: 0,
+      yearlyPrice: 0,
       description: "Essential features you need to get started",
-      features: ["Example Feature Number 1", "Example Feature Number 2", "Example Feature Number 3"],
+      features: [
+        "Basic risk scoring",
+        "Limited set of indicators",
+        "Trading history",
+        "Email support"
+      ],
       priceIdMonthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
       priceIdYearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
       actionLabel: "Get Started",
     },
     {
       title: "Pro",
-      monthlyPrice: 25,
-      yearlyPrice: 250,
+      monthlyPrice: 100,
+      yearlyPrice: 1000,
       description: "Perfect for owners of small & medium businessess",
-      features: ["Example Feature Number 1", "Example Feature Number 2", "Example Feature Number 3"],
+      features: [
+        "Advanced risk scoring",
+        "All indicators and signals",
+        "Portfolio analysis",
+        "Priority support"
+      ],
       actionLabel: "Get Started",
       priceIdMonthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
       priceIdYearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
@@ -188,9 +183,15 @@ export default function Pricing() {
     },
     {
       title: "Enterprise",
-      price: "Custom",
+      monthlyPrice: "Custom",
+      yearlyPrice: "Custom",
       description: "Dedicated support and infrastructure to fit your needs",
-      features: ["Example Feature Number 1", "Example Feature Number 2", "Example Feature Number 3", "Super Exclusive Feature"],
+      features: [
+        "API access",
+        "Custom metrics",
+        "Dedicated manager",
+        "SLA guarantees"
+      ],
       actionLabel: "Contact Sales",
       priceIdMonthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
       priceIdYearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
@@ -199,14 +200,34 @@ export default function Pricing() {
   ]
 
   return (
-    <div>
-      <PricingHeader title="Sample Pricing Plans" subtitle="Use these sample pricing cards in your SAAS" />
-      <PricingSwitch onSwitch={togglePricingPeriod} />
-      <section className="flex flex-col sm:flex-row sm:flex-wrap justify-center gap-8 mt-8">
-        {plans.map((plan) => {
-          return <PricingCard user={user} handleCheckout={handleCheckout} key={plan.title} {...plan} isYearly={isYearly} />
-        })}
-      </section>
-    </div>
+    <section className="py-20 border-t border-white/10">
+      <div className="container mx-auto px-4">
+        <PricingHeader 
+          title="Pricing Plans" 
+          subtitle="Choose the right plan for your needs" 
+        />
+        <PricingSwitch onSwitch={togglePricingPeriod} />
+        <div className="grid md:grid-cols-3 gap-8 mt-8">
+          {plans.map((plan) => (
+            <PricingCard 
+              user={user}
+              handleCheckout={handleCheckout}
+              key={plan.title}
+              isYearly={isYearly}
+              title={plan.title}
+              monthlyPrice={typeof plan.monthlyPrice === 'number' ? plan.monthlyPrice : 0}
+              yearlyPrice={typeof plan.yearlyPrice === 'number' ? plan.yearlyPrice : 0} 
+              description={plan.description}
+              features={plan.features}
+              actionLabel={plan.actionLabel}
+              priceIdMonthly={plan.priceIdMonthly}
+              priceIdYearly={plan.priceIdYearly}
+              popular={plan.popular}
+              exclusive={plan.exclusive}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
   )
 }
