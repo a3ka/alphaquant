@@ -2,18 +2,17 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import Image from 'next/image'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { 
   ArrowUpRight, 
-  Users, 
-  Percent, 
+  Users,
+  Percent,
   Signal, 
-  Menu,
-  ChevronDown
+  Menu
 } from 'lucide-react'
 import Link from 'next/link'
+import { AIAgent } from 'components/homepage/AIAgent'
 
 interface AlphaFactor {
   name: string
@@ -277,6 +276,7 @@ function SignalFlowVisualization({ isMobile }: { isMobile: boolean }) {
       <AnimatePresence>
         {signals.map((signal, index) => (
           <motion.div
+            
             key={index}
             className={`absolute px-1.5 py-0.5 sm:px-2 sm:py-1 rounded ${isMobile ? 'text-[8px]' : 'text-[10px] sm:text-xs md:text-sm'} font-medium ${
               signal.type === 'buy' ? 'bg-[#00C853]/20 text-[#00C853]' :
@@ -319,7 +319,7 @@ export default function LandingPage() {
          style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%239C92AC' fill-opacity='0.4' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'%3E%3C/path%3E%3C/svg%3E')" }}>
       <ParticleBackground />
       <div className="h-full w-full flex flex-col backdrop-blur-sm rounded-2xl border border-[#0A1929]" 
-           style={{ boxShadow: '0 0 20px rgba(0, 122, 255, 0.2)', background: 'linear-gradient(to bottom, rgba(10, 25, 41, 0.8), rgba(10,   11, 13, 0.9))' }}>
+           style={{ boxShadow: '0 0 20px rgba(0, 122, 255, 0.2)', background: 'linear-gradient(to bottom, rgba(10, 25, 41, 0.8), rgba(10, 11, 13, 0.9))' }}>
         <div className="pt-2 sm:pt-4 rounded-t-2xl bg-[#0A1929]/80 backdrop-blur-md" style={{ boxShadow: '0 0 20px rgba(0, 122, 255, 0.2)' }}>
           <nav className="container mx-auto px-3 sm:px-4">
             <div className="h-12 sm:h-16 flex items-center justify-between">
@@ -422,6 +422,8 @@ export default function LandingPage() {
             </div>
           </div>
         </main>
+
+        <AIAgent />
       </div>
     </div>
   )
