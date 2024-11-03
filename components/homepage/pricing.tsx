@@ -12,6 +12,7 @@ import { loadStripe } from "@stripe/stripe-js"
 import { toast } from "sonner"
 import { TITLE_TAILWIND_CLASS } from "@/utils/constants"
 import { useRouter } from "next/navigation"
+import { ArrowUpRight } from "lucide-react"
 
 type PricingSwitchProps = {
   onSwitch: (value: string) => void
@@ -82,10 +83,10 @@ const PricingCard = ({ user, handleCheckout, isYearly, title, priceIdMonthly, pr
         <Button 
           onClick={() => {
             if (user?.id) {
-              handleCheckout(isYearly ? priceIdYearly : priceIdMonthly, true)
+              router.push("/trading")
             } else {
-              toast("Please login or sign up to purchase", {
-                description: "You must be logged in to make a purchase",
+              toast("Please login or sign up to start trading", {
+                description: "You must be logged in to access trading features",
                 action: {
                   label: "Sign Up",
                   onClick: () => {
@@ -95,10 +96,10 @@ const PricingCard = ({ user, handleCheckout, isYearly, title, priceIdMonthly, pr
               })
             }
           }}
-          className="w-full mb-6" 
-          variant={popular ? "default" : "outline"}
+          className="h-8 sm:h-10 md:h-12 px-4 sm:px-6 md:px-8 text-xs sm:text-sm md:text-base lg:text-lg bg-gradient-to-r from-[#003366] to-[#0066CC] hover:from-[#002244] hover:to-[#004499] text-white border-none rounded-lg transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,102,255,0.5)] hover:brightness-110"
         >
-          {actionLabel}
+          Start Trading
+          <ArrowUpRight className="ml-2 h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5" />
         </Button>
         <ul className="space-y-4">
           {features.map((feature, index) => (
@@ -117,6 +118,7 @@ export default function Pricing() {
   const [isYearly, setIsYearly] = useState<boolean>(false)
   const togglePricingPeriod = (value: string) => setIsYearly(parseInt(value) === 1)
   const { user } = useUser();
+  const router = useRouter();
   const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null)
 
   useEffect(() => {

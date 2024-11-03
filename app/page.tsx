@@ -13,6 +13,11 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { AIAgent } from 'components/homepage/AIAgent'
+import { useUser } from "@clerk/nextjs"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
+import { UserProfile } from "@/components/user-profile"
+import { AuthModal } from '@/components/auth/auth-modal'
 
 interface AlphaFactor {
   name: string
@@ -304,6 +309,10 @@ function SignalFlowVisualization({ isMobile }: { isMobile: boolean }) {
 
 export default function LandingPage() {
   const [isMobile, setIsMobile] = useState(false)
+  const { user } = useUser()
+  const router = useRouter()
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [authMode, setAuthMode] = useState<'sign-up' | 'sign-in'>('sign-in')
 
   useEffect(() => {
     const checkMobile = () => {
@@ -313,6 +322,10 @@ export default function LandingPage() {
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  const handleModeChange = (newMode: 'sign-up' | 'sign-in') => {
+    setAuthMode(newMode)
+  }
 
   return (
     <div className="h-screen w-screen bg-[#0A0B0D] bg-opacity-95 text-white overflow-hidden relative p-2 sm:p-4" 
@@ -352,6 +365,7 @@ export default function LandingPage() {
                   Launch Platform
                   <ArrowUpRight className="ml-2 h-4 w-4" />
                 </Button>
+                {user?.id && <UserProfile />}
                 <Button variant="ghost" size="icon" className="md:hidden h-8 w-8">
                   <Menu className="h-5 w-5" />
                 </Button>
@@ -406,16 +420,20 @@ export default function LandingPage() {
                   </CardContent>
                 </Card>
               </motion.div>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 }}
+              <Button 
+                onClick={() => {
+                  if (user?.id) {
+                    router.push("/trading")
+                  } else {
+                    setShowAuthModal(true)
+                    setAuthMode('sign-in')
+                  }
+                }}
+                className="h-8 sm:h-10 md:h-12 px-4 sm:px-6 md:px-8 text-xs sm:text-sm md:text-base lg:text-lg bg-gradient-to-r from-[#003366] to-[#0066CC] hover:from-[#002244] hover:to-[#004499] text-white border-none rounded-lg transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,102,255,0.5)] hover:brightness-110"
               >
-                <Button className="h-8 sm:h-10 md:h-12 px-4 sm:px-6 md:px-8 text-xs sm:text-sm md:text-base lg:text-lg bg-gradient-to-r from-[#003366] to-[#0066CC] hover:from-[#002244] hover:to-[#004499] text-white border-none rounded-lg transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,102,255,0.5)] hover:brightness-110">
-                  Start Trading
-                  <ArrowUpRight className="ml-2 h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5" />
-                </Button>
-              </motion.div>
+                Start Trading
+                <ArrowUpRight className="ml-2 h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5" />
+              </Button>
             </div>
             <div className="w-full">
               <SignalFlowVisualization isMobile={isMobile} />
@@ -425,6 +443,12 @@ export default function LandingPage() {
 
         <AIAgent />
       </div>
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)}
+        mode={authMode}
+        onModeChange={setAuthMode}
+      />
     </div>
   )
 }
