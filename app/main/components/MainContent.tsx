@@ -158,27 +158,92 @@ const initialAssets = [
   }
 ]
 
-export function MainContent() {
-  const [isLoading, setIsLoading] = useState(true)
-  const [assets, setAssets] = useState(initialAssets)
-  const [timeRange, setTimeRange] = useState('24H')
-  const [selectedAsset, setSelectedAsset] = useState(assets[2]) // CSPR selected by default
+// Выносим логику загрузки данных в отдельный хук
+function useAssetsData() {
+  const [data, setData] = useState<{
+    assets: typeof initialAssets,
+    selectedAsset: typeof initialAssets[0],
+    pieChartData: any[]
+  } | null>(null)
 
   useEffect(() => {
+    let mounted = true
+    console.log('🔄 Starting data load...')
+
     const loadData = async () => {
       try {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        setAssets(initialAssets)
+        console.log('📊 Initial assets length:', initialAssets.length)
+        const assets = initialAssets
+        const selectedAsset = assets[2]
+        
+        console.log('🎯 Selected asset:', selectedAsset.symbol)
+        
+        const topAssets = assets.slice(0, 7)
+        const otherAssets = assets.slice(7)
+        console.log('📈 Top assets length:', topAssets.length)
+        console.log('📉 Other assets length:', otherAssets.length)
+        
+        const pieChartData = [
+          ...topAssets,
+          {
+            name: 'Other',
+            symbol: 'OTHER',
+            value: otherAssets.reduce((sum, asset) => sum + asset.value, 0),
+            percentage: otherAssets.reduce((sum, asset) => sum + asset.percentage, 0),
+            color: '#808080'
+          }
+        ]
+        
+        console.log('🥧 Pie chart data length:', pieChartData.length)
+
+        if (mounted) {
+          console.log('💾 Setting data...')
+          setData({
+            assets,
+            selectedAsset,
+            pieChartData
+          })
+          console.log('✅ Data set successfully')
+        }
       } catch (error) {
-        console.error('Error loading assets:', error)
-      } finally {
-        setIsLoading(false)
+        console.error('❌ Error loading data:', error)
       }
     }
 
     loadData()
+    return () => {
+      mounted = false
+      console.log('🔴 Component unmounted')
+    }
   }, [])
+
+  return data
+}
+
+// Основной компонент
+export function MainContent() {
+  const [timeRange, setTimeRange] = useState('24H')
+  console.log('🔄 MainContent rendering...')
+  
+  const data = useAssetsData()
+  console.log('📦 Current data state:', {
+    hasData: !!data,
+    assetsLength: data?.assets?.length,
+    selectedAsset: data?.selectedAsset?.symbol,
+    pieChartLength: data?.pieChartData?.length
+  })
+
+  if (!data) {
+    console.log('⏳ Loading state...')
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+      </div>
+    )
+  }
+
+  console.log('🎨 Rendering full component...')
+  const { assets, selectedAsset, pieChartData } = data
 
   const formatYAxis = (value: number) => {
     if (value >= 1000000) {
@@ -210,33 +275,6 @@ export function MainContent() {
     if (risk < 30) return 'bg-green-500'
     if (risk < 60) return 'bg-yellow-500'
     return 'bg-red-500'
-  }
-
-  // Prepare data for pie chart
-  const pieChartData = useMemo(() => {
-    const topAssets = assets.slice(0, 7)
-    const otherAssets = assets.slice(7)
-    const otherValue = otherAssets.reduce((sum, asset) => sum + asset.value, 0)
-    const otherPercentage = otherAssets.reduce((sum, asset) => sum + asset.percentage, 0)
-
-    return [
-      ...topAssets,
-      {
-        name: 'Other',
-        symbol: 'OTHER',
-        value: otherValue,
-        percentage: otherPercentage,
-        color: '#808080'
-      }
-    ]
-  }, [assets])
-
-  if (isLoading || assets.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-      </div>
-    )
   }
 
   return (
@@ -355,9 +393,14 @@ export function MainContent() {
                             paddingAngle={2}
                             dataKey="value"
                             nameKey="symbol"
-                            onClick={(_, index) => setSelectedAsset(pieChartData[index])}
+                            onClick={(_, index) => {
+                              const asset = pieChartData[index];
+                              if ('logo' in asset) {  // проверяем, что это полный объект актива
+                                setSelectedAsset(asset);
+                              }
+                            }}
                             activeIndex={pieChartData.findIndex(a => a.symbol === selectedAsset?.symbol)}
-                            activeShape={(props) => {
+                            activeShape={(props: any) => {
                               const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
                               return (
                                 <g>
@@ -433,17 +476,12 @@ export function MainContent() {
                         <div key={asset.symbol} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             {asset.symbol === 'OTHER' ? (
-                              <div className="flex -space-x-2">
-                                {assets.slice(7, 10).map((otherAsset, i) => (
-                                  <Avatar key={otherAsset.symbol} className="h-5 w-5 border border-[#010714]">
-                                    <AvatarImage src={otherAsset.logo} alt={otherAsset.name} />
-                                    <AvatarFallback>{otherAsset.symbol}</AvatarFallback>
-                                  </Avatar>
-                                ))}
-                              </div>
+                              <Avatar className="h-5 w-5">
+                                <AvatarFallback>OTH</AvatarFallback>
+                              </Avatar>
                             ) : (
                               <Avatar className="h-5 w-5">
-                                <AvatarImage src={asset.logo} alt={asset.name} />
+                                <AvatarImage src={'logo' in asset ? asset.logo : ''} alt={asset.name} />
                                 <AvatarFallback>{asset.symbol}</AvatarFallback>
                               </Avatar>
                             )}
@@ -510,16 +548,15 @@ export function MainContent() {
                     </div>
                     <div className="flex flex-col">
                       <AnimatePresence>
-                        {assets.map((asset, index) => (
+                      {assets.map((asset, index) => (
                           <motion.div 
                             key={asset.symbol}
                             className={`grid grid-cols-8 gap-2 p-2 hover:bg-[#0A1929] cursor-pointer ${
                               index % 2 === 0 ? 'bg-[#010714]' : 'bg-[#010714]/50'
                             }`}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.3, delay: index * 0.05 }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.2 }}
                           >
                             <div className="col-span-2 flex items-center">
                               <Avatar className="h-6 w-6 mr-2">
