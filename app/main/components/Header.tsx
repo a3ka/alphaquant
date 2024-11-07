@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import Link from 'next/link'
+import { UserProfile } from '@/components/user-profile'
 
 export function Header() {
   return (
@@ -43,10 +44,9 @@ export function Header() {
             <Button variant="ghost" size="icon">
               <Settings className="h-5 w-5" />
             </Button>
-            <Avatar>
-              <AvatarImage src="/placeholder-avatar.jpg" />
-              <AvatarFallback><User /></AvatarFallback>
-            </Avatar>
+            <div className="flex items-center gap-2">
+              <UserProfile />
+            </div>
           </div>
         </div>
       </div>

@@ -7,8 +7,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ArrowUpRight } from 'lucide-react'
 import { useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
-import { toast } from "sonner"
 import { AuthModal } from '@/components/auth/auth-modal'
+import { UserProfile } from '@/components/user-profile'
 
 import ParticleBackground from '@/components/ParticleBackground'
 import SignalFlowVisualization from '@/components/SignalFlowVisualization'

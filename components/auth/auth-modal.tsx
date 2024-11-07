@@ -48,17 +48,21 @@ export const AuthModal = ({ isOpen, onClose, mode, onModeChange }: AuthModalProp
         <VisuallyHidden>
           <DialogTitle>{mode === 'sign-in' ? 'Sign In' : 'Sign Up'}</DialogTitle>
         </VisuallyHidden>
-        {mode === 'sign-in' ? (
-          <SignIn 
-            appearance={appearance}
-            routing="hash"
-            afterSignInUrl="/trading"
-          />
-        ) : (
+        {mode === 'sign-up' ? (
           <SignUp 
             appearance={appearance}
             routing="hash"
-            afterSignUpUrl="/trading"
+            afterSignUpUrl="/main"
+            signInUrl="/sign-in"
+            redirectUrl="/main"
+          />
+        ) : (
+          <SignIn 
+            appearance={appearance}
+            routing="hash"
+            afterSignInUrl="/main"
+            signUpUrl="/sign-up"
+            redirectUrl="/main"
           />
         )}
       </DialogContent>

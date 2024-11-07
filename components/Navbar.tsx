@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Button } from "@/components/ui/button"
+import { UserProfile } from "@/components/user-profile"
 import { 
   ArrowUpRight, 
   Users, 
@@ -7,12 +8,15 @@ import {
   Signal, 
   Menu
 } from 'lucide-react'
+import { useUser } from "@clerk/nextjs"
 
 export default function Navbar() {
+  const { user } = useUser()
+
   return (
-    <div className="pt-2 sm:pt-4 rounded-t-2xl bg-[#0A1929]/80 backdrop-blur-md" style={{ boxShadow: '0 0 20px rgba(0, 122, 255, 0.2)' }}>
-      <nav className="container mx-auto px-3 sm:px-4">
-        <div className="h-12 sm:h-16 flex items-center justify-between">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0A0B0D]/80 backdrop-blur-sm border-b border-white/10">
+      <div className="container mx-auto px-4">
+        <div className="h-16 flex items-center justify-between">
           <div className="flex items-center space-x-4 sm:space-x-8">
             <div className="text-lg sm:text-xl font-bold">AlphaQuant</div>
             <div className="hidden md:flex space-x-4 lg:space-x-6">
@@ -42,12 +46,15 @@ export default function Navbar() {
               Launch Platform
               <ArrowUpRight className="ml-2 h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="md:hidden h-8 w-8">
-              <Menu className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center space-x-4">
+              {user && <UserProfile />}
+              <Button variant="ghost" size="icon" className="md:hidden h-8 w-8">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
         </div>
-      </nav>
-    </div>
+      </div>
+    </nav>
   )
 }

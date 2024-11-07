@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { ArrowUp, Plus } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ArrowUp, Plus, Loader2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -25,104 +25,160 @@ const portfolioData = [
 const highestValue = Math.max(...portfolioData.map(item => item.value))
 const highestValueDate = portfolioData.find(item => item.value === highestValue)?.date
 
-export function MainContent() {
-  const [timeRange, setTimeRange] = useState('24H')
-  
-  const assets = [
-    { 
-      name: 'Stark Network',
-      symbol: 'STRK',
-      logo: 'https://assets.coingecko.com/coins/images/26433/standard/starknet.png?1696525507',
-      amount: 1000,
-      price: 45.43,
-      change24h: 2.30,
-      change7d: 5.10,
-      value: 45432.33,
-      profit: 15000,
-      percentage: 18.44,
-      color: '#FF69B4'
-    },
-    { 
-      name: 'MAGIC',
-      symbol: 'MAGIC',
-      logo: 'https://assets.coingecko.com/coins/images/18623/standard/magic.png?1696518095',
-      amount: 5000,
-      price: 6.12,
-      change24h: -1.20,
-      change7d: 3.70,
-      value: 30600,
-      profit: 7500,
-      percentage: 10.21,
-      color: '#8A2BE2'
-    },
-    { 
-      name: 'Casper Network',
-      symbol: 'CSPR',
-      logo: 'https://assets.coingecko.com/coins/images/15279/standard/CSPR_Token_Logo_CoinGecko.png?1709518377',
-      amount: 100000,
-      price: 0.45,
-      change24h: 0.5,
-      change7d: -2.10,
-      value: 45432.33,
-      profit: -500,
-      percentage: 15.89,
-      color: '#4169E1'
-    },
-    { 
-      name: 'Hedera',
-      symbol: 'HBAR',
-      logo: 'https://assets.coingecko.com/coins/images/3688/standard/hbar.png?1696504364',
-      amount: 200000,
-      price: 0.15,
-      change24h: 1.8,
-      change7d: 4.2,
-      value: 30000,
-      profit: 2000,
-      percentage: 9.42,
-      color: '#20B2AA'
-    },
-    { 
-      name: 'Wormhole',
-      symbol: 'W',
-      logo: 'https://assets.coingecko.com/coins/images/35087/standard/womrhole_logo_full_color_rgb_2000px_72ppi_fb766ac85a.png?1708688954',
-      amount: 1500,
-      price: 28.33,
-      change24h: -0.7,
-      change7d: 6.5,
-      value: 42495,
-      profit: 1200,
-      percentage: 15.05,
-      color: '#FFD700'
-    },
-    { 
-      name: 'Convex Finance',
-      symbol: 'CVX',
-      logo: 'https://assets.coingecko.com/coins/images/15585/standard/convex.png?1696515221',
-      amount: 800,
-      price: 20.31,
-      change24h: 1.2,
-      change7d: -1.5,
-      value: 16248,
-      profit: -300,
-      percentage: 5.78,
-      color: '#FF6347'
-    },
-    { 
-      name: 'Decentraland',
-      symbol: 'MANA',
-      logo: 'https://assets.coingecko.com/coins/images/878/standard/decentraland-mana.png?1696502010',
-      amount: 12000,
-      price: 2.61,
-      change24h: 3.1,
-      change7d: 8.20,
-      value: 31320,
-      profit: 4500,
-      percentage: 11.00,
-      color: '#DA70D6'
-    }
-  ]
+const initialAssets = [
+  { 
+    name: 'Stark Network',
+    symbol: 'STRK',
+    logo: 'https://assets.coingecko.com/coins/images/26433/standard/starknet.png?1696525507',
+    amount: 1000,
+    price: 45.43,
+    change24h: 2.30,
+    change7d: 5.10,
+    value: 45432.33,
+    profit: 15000,
+    percentage: 15.17,
+    color: '#FF69B4'
+  },
+  { 
+    name: 'MAGIC',
+    symbol: 'MAGIC',
+    logo: 'https://assets.coingecko.com/coins/images/18623/standard/magic.png?1696518095',
+    amount: 5000,
+    price: 6.12,
+    change24h: -1.20,
+    change7d: 3.70,
+    value: 30600,
+    profit: 7500,
+    percentage: 10.21,
+    color: '#8A2BE2'
+  },
+  { 
+    name: 'Casper Network',
+    symbol: 'CSPR',
+    logo: 'https://assets.coingecko.com/coins/images/15279/standard/CSPR_Token_Logo_CoinGecko.png?1709518377',
+    amount: 100000,
+    price: 0.45,
+    change24h: 0.5,
+    change7d: -2.10,
+    value: 45432.33,
+    profit: -500,
+    percentage: 15.17,
+    color: '#4169E1'
+  },
+  { 
+    name: 'Hedera',
+    symbol: 'HBAR',
+    logo: 'https://assets.coingecko.com/coins/images/3688/standard/hbar.png?1696504364',
+    amount: 200000,
+    price: 0.15,
+    change24h: 1.8,
+    change7d: 4.2,
+    value: 30000,
+    profit: 2000,
+    percentage: 10.02,
+    color: '#20B2AA'
+  },
+  { 
+    name: 'Wormhole',
+    symbol: 'W',
+    logo: 'https://assets.coingecko.com/coins/images/35087/standard/womrhole_logo_full_color_rgb_2000px_72ppi_fb766ac85a.png?1708688954',
+    amount: 1500,
+    price: 28.33,
+    change24h: -0.7,
+    change7d: 6.5,
+    value: 42495,
+    profit: 1200,
+    percentage: 14.19,
+    color: '#FFD700'
+  },
+  { 
+    name: 'Convex Finance',
+    symbol: 'CVX',
+    logo: 'https://assets.coingecko.com/coins/images/15585/standard/convex.png?1696515221',
+    amount: 800,
+    price: 20.31,
+    change24h: 1.2,
+    change7d: -1.5,
+    value: 16248,
+    profit: -300,
+    percentage: 5.42,
+    color: '#FF6347'
+  },
+  { 
+    name: 'Decentraland',
+    symbol: 'MANA',
+    logo: 'https://assets.coingecko.com/coins/images/878/standard/decentraland-mana.png?1696502010',
+    amount: 12000,
+    price: 2.61,
+    change24h: 3.1,
+    change7d: 8.20,
+    value: 31320,
+    profit: 4500,
+    percentage: 10.46,
+    color: '#DA70D6'
+  },
+  { 
+    name: 'Ethena',
+    symbol: 'ENA',
+    logo: 'https://assets.coingecko.com/coins/images/36530/standard/ethena.png?1711701436',
+    amount: 5000,
+    price: 1.5,
+    change24h: 2.5,
+    change7d: 7.8,
+    value: 7500,
+    profit: 500,
+    percentage: 2.50,
+    color: '#4B0082'
+  },
+  { 
+    name: 'Ethereum Classic',
+    symbol: 'ETC',
+    logo: 'https://assets.coingecko.com/coins/images/453/standard/ethereum-classic-logo.png?1696501717',
+    amount: 300,
+    price: 30.5,
+    change24h: -0.8,
+    change7d: 3.2,
+    value: 9150,
+    profit: 300,
+    percentage: 3.05,
+    color: '#3CB371'
+  },
+  { 
+    name: 'Bitcoin',
+    symbol: 'BTC',
+    logo: 'https://assets.coingecko.com/coins/images/1/standard/bitcoin.png?1696501400',
+    amount: 0.5,
+    price: 70000,
+    change24h: 1.5,
+    change7d: 5.7,
+    value: 35000,
+    profit: 5000,
+    percentage: 11.69,
+    color: '#F7931A'
+  }
+]
 
+export function MainContent() {
+  const [isLoading, setIsLoading] = useState(true)
+  const [assets, setAssets] = useState(initialAssets)
+  const [timeRange, setTimeRange] = useState('24H')
   const [selectedAsset, setSelectedAsset] = useState(assets[2]) // CSPR selected by default
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Simulate API call delay
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        setAssets(initialAssets)
+      } catch (error) {
+        console.error('Error loading assets:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
 
   const formatYAxis = (value: number) => {
     if (value >= 1000000) {
@@ -134,7 +190,7 @@ export function MainContent() {
     return `$${value}`
   }
 
-  const RADIAN = Math.PI / 180;
+  const RADIAN = Math.PI / 180
 
   // Calculate total portfolio risk based on asset volatility and distribution
   const calculatePortfolioRisk = () => {
@@ -154,6 +210,33 @@ export function MainContent() {
     if (risk < 30) return 'bg-green-500'
     if (risk < 60) return 'bg-yellow-500'
     return 'bg-red-500'
+  }
+
+  // Prepare data for pie chart
+  const pieChartData = useMemo(() => {
+    const topAssets = assets.slice(0, 7)
+    const otherAssets = assets.slice(7)
+    const otherValue = otherAssets.reduce((sum, asset) => sum + asset.value, 0)
+    const otherPercentage = otherAssets.reduce((sum, asset) => sum + asset.percentage, 0)
+
+    return [
+      ...topAssets,
+      {
+        name: 'Other',
+        symbol: 'OTHER',
+        value: otherValue,
+        percentage: otherPercentage,
+        color: '#808080'
+      }
+    ]
+  }, [assets])
+
+  if (isLoading || assets.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+      </div>
+    )
   }
 
   return (
@@ -233,14 +316,12 @@ export function MainContent() {
                         dot={false}
                         activeDot={{ r: 6, fill: '#8B5CF6' }}
                       />
-                      {/* Add gradient definition */}
                       <defs>
                         <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#8B5CF6" stopOpacity={1}/>
                           <stop offset="95%" stopColor="#EC4899" stopOpacity={1}/>
                         </linearGradient>
                       </defs>
-                      {/* Add highest value label */}
                       {highestValueDate && (
                         <ReferenceLine
                           x={highestValueDate}
@@ -251,7 +332,7 @@ export function MainContent() {
                             value: `High: $${highestValue.toLocaleString()}`,
                             fill: '#E5E7EB',
                             fontSize: 12,
-                            offset: 20 // Add this line to move the label down
+                            offset: 20
                           }}
                         />
                       )}
@@ -266,7 +347,7 @@ export function MainContent() {
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
-                            data={assets}
+                            data={pieChartData}
                             cx="50%"
                             cy="50%"
                             innerRadius={80}
@@ -274,20 +355,10 @@ export function MainContent() {
                             paddingAngle={2}
                             dataKey="value"
                             nameKey="symbol"
-                            onClick={(_, index) => setSelectedAsset(assets[index])}
-                            activeIndex={assets.findIndex(a => a.symbol === selectedAsset?.symbol)}
+                            onClick={(_, index) => setSelectedAsset(pieChartData[index])}
+                            activeIndex={pieChartData.findIndex(a => a.symbol === selectedAsset?.symbol)}
                             activeShape={(props) => {
                               const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
-                              const sin = Math.sin(-RADIAN * startAngle);
-                              const cos = Math.cos(-RADIAN * startAngle);
-                              const sx = cx + (outerRadius + 10) * cos;
-                              const sy = cy + (outerRadius + 10) * sin;
-                              const mx = cx + (outerRadius + 10) * Math.cos(-RADIAN * endAngle);
-                              const my = cy + (outerRadius + 10) * Math.sin(-RADIAN * endAngle);
-                              const ex = mx;
-                              const ey = my;
-                              const textAnchor = cos >= 0 ? 'start' : 'end';
-
                               return (
                                 <g>
                                   <Sector
@@ -303,7 +374,7 @@ export function MainContent() {
                               );
                             }}
                           >
-                            {assets.map((entry, index) => (
+                            {pieChartData.map((entry, index) => (
                               <Cell 
                                 key={`cell-${index}`} 
                                 fill={entry.color}
@@ -328,13 +399,17 @@ export function MainContent() {
                                   <span style={{ color: entry.payload.color }}>{name}</span>
                                   <span className="text-gray-300">{entry.payload.percentage.toFixed(2)}%</span>
                                 </div>
-                                <div className="text-[0.6rem] text-gray-300">
-                                  Amount: {entry.payload.amount.toLocaleString()} {name}
-                                </div>
-                                <div className="flex justify-between text-[0.6rem]">
-                                  <span>24h: <span className={entry.payload.change24h >= 0 ? 'text-green-400' : 'text-red-400'}>{entry.payload.change24h.toFixed(2)}%</span></span>
-                                  <span>7d: <span className={entry.payload.change7d >= 0 ? 'text-green-400' : 'text-red-400'}>{entry.payload.change7d.toFixed(2)}%</span></span>
-                                </div>
+                                {entry.payload.symbol !== 'OTHER' && (
+                                  <>
+                                    <div className="text-[0.6rem] text-gray-300">
+                                      Amount: {entry.payload.amount.toLocaleString()} {name}
+                                    </div>
+                                    <div className="flex justify-between text-[0.6rem]">
+                                      <span>24h: <span className={entry.payload.change24h >= 0 ? 'text-green-400' : 'text-red-400'}>{entry.payload.change24h.toFixed(2)}%</span></span>
+                                      <span>7d: <span className={entry.payload.change7d >= 0 ? 'text-green-400' : 'text-red-400'}>{entry.payload.change7d.toFixed(2)}%</span></span>
+                                    </div>
+                                  </>
+                                )}
                               </div>,
                               ''
                             ]}
@@ -354,13 +429,24 @@ export function MainContent() {
                   <div className="w-1/2 pl-4">
                     <h3 className="text-white font-semibold mb-4">Portfolio Distribution</h3>
                     <div className="space-y-3">
-                      {assets.map((asset) => (
+                      {pieChartData.map((asset) => (
                         <div key={asset.symbol} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <Avatar className="h-5 w-5">
-                              <AvatarImage src={asset.logo} alt={asset.name} />
-                              <AvatarFallback>{asset.symbol}</AvatarFallback>
-                            </Avatar>
+                            {asset.symbol === 'OTHER' ? (
+                              <div className="flex -space-x-2">
+                                {assets.slice(7, 10).map((otherAsset, i) => (
+                                  <Avatar key={otherAsset.symbol} className="h-5 w-5 border border-[#010714]">
+                                    <AvatarImage src={otherAsset.logo} alt={otherAsset.name} />
+                                    <AvatarFallback>{otherAsset.symbol}</AvatarFallback>
+                                  </Avatar>
+                                ))}
+                              </div>
+                            ) : (
+                              <Avatar className="h-5 w-5">
+                                <AvatarImage src={asset.logo} alt={asset.name} />
+                                <AvatarFallback>{asset.symbol}</AvatarFallback>
+                              </Avatar>
+                            )}
                             <span className="text-white text-sm">{asset.symbol}</span>
                           </div>
                           <div className="flex items-center gap-2">
@@ -423,40 +509,43 @@ export function MainContent() {
                       <div className="text-right">P/L</div>
                     </div>
                     <div className="flex flex-col">
-                      {assets.map((asset, index) => (
-                        <motion.div 
-                          key={asset.symbol}
-                          className={`grid grid-cols-8 gap-2 p-2 hover:bg-[#0A1929] cursor-pointer ${
-                            index % 2 === 0 ? 'bg-[#010714]' : 'bg-[#010714]/50'
-                          }`}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: index * 0.05 }}
-                        >
-                          <div className="col-span-2 flex items-center">
-                            <Avatar className="h-6 w-6 mr-2">
-                              <AvatarImage src={asset.logo} alt={asset.name} />
-                              <AvatarFallback>{asset.symbol}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-medium text-white text-sm">{asset.name}</div>
-                              <div className="text-xs text-[#9CA3AF]">{asset.symbol}</div>
+                      <AnimatePresence>
+                        {assets.map((asset, index) => (
+                          <motion.div 
+                            key={asset.symbol}
+                            className={`grid grid-cols-8 gap-2 p-2 hover:bg-[#0A1929] cursor-pointer ${
+                              index % 2 === 0 ? 'bg-[#010714]' : 'bg-[#010714]/50'
+                            }`}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.3, delay: index * 0.05 }}
+                          >
+                            <div className="col-span-2 flex items-center">
+                              <Avatar className="h-6 w-6 mr-2">
+                                <AvatarImage src={asset.logo} alt={asset.name} />
+                                <AvatarFallback>{asset.symbol}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium text-white text-sm">{asset.name}</div>
+                                <div className="text-xs text-[#9CA3AF]">{asset.symbol}</div>
+                              </div>
                             </div>
-                          </div>
-                          <div className="text-right text-white text-sm">{asset.amount.toLocaleString()}</div>
-                          <div className={`text-right text-sm ${asset.change24h >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}`}>
-                            {asset.change24h.toFixed(2)}%
-                          </div>
-                          <div className={`text-right text-sm ${asset.change7d >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}`}>
-                            {asset.change7d.toFixed(2)}%
-                          </div>
-                          <div className="text-right text-white text-sm">${asset.price.toFixed(2)}</div>
-                          <div className="text-right text-white text-sm">${asset.value.toLocaleString()}</div>
-                          <div className={`text-right text-sm ${asset.profit >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}`}>
-                            ${Math.abs(asset.profit).toLocaleString()}
-                          </div>
-                        </motion.div>
-                      ))}
+                            <div className="text-right text-white text-sm">{asset.amount.toLocaleString()}</div>
+                            <div className={`text-right text-sm ${asset.change24h >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}`}>
+                              {asset.change24h.toFixed(2)}%
+                            </div>
+                            <div className={`text-right text-sm ${asset.change7d >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}`}>
+                              {asset.change7d.toFixed(2)}%
+                            </div>
+                            <div className="text-right text-white text-sm">${asset.price.toFixed(2)}</div>
+                            <div className="text-right text-white text-sm">${asset.value.toLocaleString()}</div>
+                            <div className={`text-right text-sm ${asset.profit >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}`}>
+                              ${Math.abs(asset.profit).toLocaleString()}
+                            </div>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
                     </div>
                   </div>
                 </div>
