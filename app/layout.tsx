@@ -8,25 +8,24 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://starter.rasmic.xyz"),
+  metadataBase: new URL("https://alphaquant.io"),
   title: {
-    default: 'Nextjs Starter Kit',
-    template: `%s | Nextjs Starter Kit`
+    default: 'AlphaQuant'
   },
-  description: 'The Ultimate Nextjs 14 Starter Kit for quickly building your SaaS, giving you time to focus on what really matters',
+  description: 'AlpaQuant',
   openGraph: {
-    description: 'The Ultimate Nextjs 14 Starter Kit for quickly building your SaaS, giving you time to focus on what really matters',
-    images: ['https://utfs.io/f/8a428f85-ae83-4ca7-9237-6f8b65411293-eun6ii.png'],
-    url: 'https://starter.rasmic.xyz/'
+    description: 'AlpaQuant',
+    images: ['https://utfs.io/f/QMCNpWnR0ZDVII5ZKGqqUmdH9Ir1e4Dzj2WgfkLZoF8pCa5y'],
+    url: 'https://alphaquant.io'
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Nextjs Starter Kit',
-    description: 'The Ultimate Nextjs 14 Starter Kit for quickly building your SaaS, giving you time to focus on what really matters',
+    title: 'AlpaQuant',
+    description: 'AlpaQuant',
     siteId: "",
-    creator: "@rasmic",
+    creator: "@aka",
     creatorId: "",
-    images: ['https://utfs.io/f/8a428f85-ae83-4ca7-9237-6f8b65411293-eun6ii.png'],
+    images: ['https://utfs.io/f/QMCNpWnR0ZDVII5ZKGqqUmdH9Ir1e4Dzj2WgfkLZoF8pCa5y'],
   },
 }
 
@@ -41,12 +40,12 @@ export default function RootLayout({
         <head>
           <link
             rel="preload"
-            href="https://utfs.io/f/31dba2ff-6c3b-4927-99cd-b928eaa54d5f-5w20ij.png"
+            href="https://utfs.io/f/QMCNpWnR0ZDVII5ZKGqqUmdH9Ir1e4Dzj2WgfkLZoF8pCa5y"
             as="image"
           />
           <link
             rel="preload"
-            href="https://utfs.io/f/69a12ab1-4d57-4913-90f9-38c6aca6c373-1txg2.png"
+            href="https://utfs.io/f/QMCNpWnR0ZDVII5ZKGqqUmdH9Ir1e4Dzj2WgfkLZoF8pCa5y"
             as="image"
           />
         </head>
