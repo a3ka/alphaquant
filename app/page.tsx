@@ -99,7 +99,7 @@ function LandingPageContent() {
         <Button 
           onClick={() => {
             if (user?.id) {
-              router.push("/trading")
+              router.push("/main")
             } else {
               setShowAuthModal(true)
               setAuthMode('sign-in')

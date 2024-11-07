@@ -1,118 +1,165 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts'
-import { ArrowDown, ArrowUp, BarChart2, MoreVertical } from 'lucide-react'
+import { ArrowUp, Plus } from 'lucide-react'
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Line, LineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Sector, ReferenceLine } from "recharts"
 
-const portfolioData = Array.from({ length: 30 }, (_, i) => ({
-  date: `2023-${(i + 1).toString().padStart(2, '0')}-01`,
-  value: 250000 + Math.random() * 100000
-}))
-
-const assets = [
-  { 
-    name: 'Bitcoin',
-    symbol: 'BTC',
-    amount: 2.5,
-    price: 45000,
-    change24h: 2.3,
-    change7d: 5.1,
-    value: 112500,
-    profit: 15000
-  },
-  { 
-    name: 'Ethereum',
-    symbol: 'ETH',
-    amount: 30,
-    price: 3000,
-    change24h: -1.2,
-    change7d: 3.7,
-    value: 90000,
-    profit: 7500
-  },
-  { 
-    name: 'Cardano',
-    symbol: 'ADA',
-    amount: 10000,
-    price: 1.2,
-    change24h: 0.5,
-    change7d: -2.1,
-    value: 12000,
-    profit: -500
-  },
-  { 
-    name: 'Binance Coin',
-    symbol: 'BNB',
-    amount: 50,
-    price: 300,
-    change24h: 1.8,
-    change7d: 4.2,
-    value: 15000,
-    profit: 2000
-  },
-  { 
-    name: 'Solana',
-    symbol: 'SOL',
-    amount: 200,
-    price: 40,
-    change24h: -0.7,
-    change7d: 6.5,
-    value: 8000,
-    profit: 1200
-  },
+// Portfolio data with a clear trend
+const portfolioData = [
+  { date: '2024-01-01', value: 250000 },
+  { date: '2024-01-02', value: 280000 },
+  { date: '2024-01-03', value: 472576 },
+  { date: '2024-01-04', value: 450000 },
+  { date: '2024-01-05', value: 420000 },
+  { date: '2024-01-06', value: 380000 },
+  { date: '2024-01-07', value: 350000 },
+  { date: '2024-01-08', value: 299441 }
 ]
 
-const assetDistribution = [
-  { name: 'BTC', value: 112500 },
-  { name: 'ETH', value: 90000 },
-  { name: 'ADA', value: 12000 },
-  { name: 'BNB', value: 15000 },
-  { name: 'Others', value: 44500 }
-]
+// Find the highest value in portfolio data
+const highestValue = Math.max(...portfolioData.map(item => item.value))
+const highestValueDate = portfolioData.find(item => item.value === highestValue)?.date
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
-
-function MainContent() {
+export function MainContent() {
   const [timeRange, setTimeRange] = useState('24H')
-  const [portfolioValue, setPortfolioValue] = useState(299441.37)
-  const [portfolioChange, setPortfolioChange] = useState({ value: 5143.97, percentage: 1.75 })
+  
+  const assets = [
+    { 
+      name: 'Stark Network',
+      symbol: 'STRK',
+      logo: 'https://assets.coingecko.com/coins/images/26433/standard/starknet.png?1696525507',
+      amount: 1000,
+      price: 45.43,
+      change24h: 2.30,
+      change7d: 5.10,
+      value: 45432.33,
+      profit: 15000,
+      percentage: 18.44,
+      color: '#FF69B4'
+    },
+    { 
+      name: 'MAGIC',
+      symbol: 'MAGIC',
+      logo: 'https://assets.coingecko.com/coins/images/18623/standard/magic.png?1696518095',
+      amount: 5000,
+      price: 6.12,
+      change24h: -1.20,
+      change7d: 3.70,
+      value: 30600,
+      profit: 7500,
+      percentage: 10.21,
+      color: '#8A2BE2'
+    },
+    { 
+      name: 'Casper Network',
+      symbol: 'CSPR',
+      logo: 'https://assets.coingecko.com/coins/images/15279/standard/CSPR_Token_Logo_CoinGecko.png?1709518377',
+      amount: 100000,
+      price: 0.45,
+      change24h: 0.5,
+      change7d: -2.10,
+      value: 45432.33,
+      profit: -500,
+      percentage: 15.89,
+      color: '#4169E1'
+    },
+    { 
+      name: 'Hedera',
+      symbol: 'HBAR',
+      logo: 'https://assets.coingecko.com/coins/images/3688/standard/hbar.png?1696504364',
+      amount: 200000,
+      price: 0.15,
+      change24h: 1.8,
+      change7d: 4.2,
+      value: 30000,
+      profit: 2000,
+      percentage: 9.42,
+      color: '#20B2AA'
+    },
+    { 
+      name: 'Wormhole',
+      symbol: 'W',
+      logo: 'https://assets.coingecko.com/coins/images/35087/standard/womrhole_logo_full_color_rgb_2000px_72ppi_fb766ac85a.png?1708688954',
+      amount: 1500,
+      price: 28.33,
+      change24h: -0.7,
+      change7d: 6.5,
+      value: 42495,
+      profit: 1200,
+      percentage: 15.05,
+      color: '#FFD700'
+    },
+    { 
+      name: 'Convex Finance',
+      symbol: 'CVX',
+      logo: 'https://assets.coingecko.com/coins/images/15585/standard/convex.png?1696515221',
+      amount: 800,
+      price: 20.31,
+      change24h: 1.2,
+      change7d: -1.5,
+      value: 16248,
+      profit: -300,
+      percentage: 5.78,
+      color: '#FF6347'
+    },
+    { 
+      name: 'Decentraland',
+      symbol: 'MANA',
+      logo: 'https://assets.coingecko.com/coins/images/878/standard/decentraland-mana.png?1696502010',
+      amount: 12000,
+      price: 2.61,
+      change24h: 3.1,
+      change7d: 8.20,
+      value: 31320,
+      profit: 4500,
+      percentage: 11.00,
+      color: '#DA70D6'
+    }
+  ]
 
-  useEffect(() => {
-    // Simulating data updates
-    const interval = setInterval(() => {
-      // Update portfolio data
-      setPortfolioValue(prevValue => {
-        const newValue = prevValue + (Math.random() - 0.5) * 5000
-        const change = newValue - prevValue
-        const changePercentage = (change / prevValue) * 100
-        setPortfolioChange({ value: change, percentage: changePercentage })
-        return newValue
-      })
+  const [selectedAsset, setSelectedAsset] = useState(assets[2]) // CSPR selected by default
 
-      // Update asset data
-      assets.forEach(asset => {
-        asset.price *= (1 + (Math.random() - 0.5) * 0.01)
-        asset.change24h += (Math.random() - 0.5) * 0.5
-        asset.change7d += (Math.random() - 0.5) * 0.5
-        asset.value = asset.amount * asset.price
-        asset.profit = asset.value - (asset.amount * asset.price * 0.95) // Assuming 5% initial profit
-      })
-    }, 5000)
+  const formatYAxis = (value: number) => {
+    if (value >= 1000000) {
+      return `$${(value / 1000000).toFixed(1)}M`
+    }
+    if (value >= 1000) {
+      return `$${(value / 1000).toFixed(0)}K`
+    }
+    return `$${value}`
+  }
 
-    return () => clearInterval(interval)
-  }, [])
+  const RADIAN = Math.PI / 180;
+
+  // Calculate total portfolio risk based on asset volatility and distribution
+  const calculatePortfolioRisk = () => {
+    // This is a simplified risk calculation
+    const volatilityFactor = assets.reduce((acc, asset) => {
+      return acc + (Math.abs(asset.change24h) + Math.abs(asset.change7d)) * (asset.percentage / 100)
+    }, 0)
+    
+    // Normalize to 0-100 range
+    return Math.min(Math.max(volatilityFactor * 2.5, 0), 100)
+  }
+
+  const portfolioRisk = calculatePortfolioRisk()
+
+  // Function to determine risk color
+  const getRiskColor = (risk: number) => {
+    if (risk < 30) return 'bg-green-500'
+    if (risk < 60) return 'bg-yellow-500'
+    return 'bg-red-500'
+  }
 
   return (
     <main className="col-span-12 lg:col-span-6 p-6 overflow-visible">
       <div className="container mx-auto max-w-full">
         <div className="grid grid-cols-12 gap-4">
-          {/* Portfolio section with unified border */}
           <div className="col-span-12 rounded-lg border border-gray-800/30 bg-[#010714] shadow-lg">
             <Card className="bg-transparent">
               <CardHeader>
@@ -130,90 +177,217 @@ function MainContent() {
               </CardHeader>
               <CardContent>
                 <div className="mb-6">
-                  <div className="text-3xl font-bold text-white">${portfolioValue.toFixed(2)}</div>
-                  <div className={`flex items-center ${portfolioChange.value >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}`}>
-                    {portfolioChange.value >= 0 ? <ArrowUp className="h-4 w-4 mr-1" /> : <ArrowDown className="h-4 w-4 mr-1" />}
-                    {portfolioChange.percentage.toFixed(2)}% (${Math.abs(portfolioChange.value).toFixed(2)})
+                  <div className="text-3xl font-bold text-white">$299441.37</div>
+                  <div className="flex items-center text-[#4ADE80]">
+                    <ArrowUp className="h-4 w-4 mr-1" />
+                    1.75% ($5143.97)
                   </div>
                 </div>
 
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={portfolioData}>
+                      <CartesianGrid 
+                        strokeDasharray="3 3" 
+                        stroke="#1F2937" 
+                        horizontal={true} 
+                        vertical={false} 
+                      />
+                      <XAxis 
+                        dataKey="date" 
+                        stroke="#9CA3AF"
+                        tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { 
+                          month: 'short',
+                          year: '2-digit'
+                        })}
+                        tick={{ fontSize: 11 }}
+                        dy={10}
+                      />
+                      <YAxis 
+                        stroke="#9CA3AF"
+                        tickFormatter={formatYAxis}
+                        width={60}
+                        tick={{ fontSize: 11 }}
+                        dx={-10}
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#1F2937', 
+                          border: 'none', 
+                          color: '#E5E7EB',
+                          fontSize: '12px',
+                          padding: '8px'
+                        }}
+                        formatter={(value: number) => [`$${value.toLocaleString()}`, 'Portfolio Value']}
+                        labelFormatter={(label: string) => new Date(label).toLocaleDateString('en-US', { 
+                          month: 'long',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      />
                       <Line 
                         type="monotone" 
                         dataKey="value" 
-                        stroke="#0B84D4" 
+                        stroke="url(#colorGradient)"
                         strokeWidth={2}
                         dot={false}
+                        activeDot={{ r: 6, fill: '#8B5CF6' }}
                       />
-                      <XAxis dataKey="date" stroke="#9CA3AF" />
-                      <YAxis stroke="#9CA3AF" />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#1F2937', border: 'none' }}
-                        labelStyle={{ color: '#E5E7EB' }}
-                        itemStyle={{ color: '#0B84D4' }}
-                      />
-                      <Legend />
+                      {/* Add gradient definition */}
+                      <defs>
+                        <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#8B5CF6" stopOpacity={1}/>
+                          <stop offset="95%" stopColor="#EC4899" stopOpacity={1}/>
+                        </linearGradient>
+                      </defs>
+                      {/* Add highest value label */}
+                      {highestValueDate && (
+                        <ReferenceLine
+                          x={highestValueDate}
+                          stroke="#8B5CF6"
+                          strokeDasharray="3 3"
+                          label={{
+                            position: 'top',
+                            value: `High: $${highestValue.toLocaleString()}`,
+                            fill: '#E5E7EB',
+                            fontSize: 12,
+                            offset: 20 // Add this line to move the label down
+                          }}
+                        />
+                      )}
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
 
-                <div className="mt-6 flex justify-between items-center">
+                <div className="mt-6 flex justify-between items-start">
                   <div className="w-1/2">
-                    <h3 className="text-white font-semibold  mb-2">Asset Distribution</h3>
-                    <div className="h-[200px]">
+                    <h3 className="text-white font-semibold mb-2">Asset Distribution</h3>
+                    <div className="h-[300px] relative">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
-                            data={assetDistribution}
+                            data={assets}
                             cx="50%"
                             cy="50%"
-                            labelLine={false}
-                            outerRadius={80}
-                            fill="#8884d8"
+                            innerRadius={80}
+                            outerRadius={120}
+                            paddingAngle={2}
                             dataKey="value"
+                            nameKey="symbol"
+                            onClick={(_, index) => setSelectedAsset(assets[index])}
+                            activeIndex={assets.findIndex(a => a.symbol === selectedAsset?.symbol)}
+                            activeShape={(props) => {
+                              const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+                              const sin = Math.sin(-RADIAN * startAngle);
+                              const cos = Math.cos(-RADIAN * startAngle);
+                              const sx = cx + (outerRadius + 10) * cos;
+                              const sy = cy + (outerRadius + 10) * sin;
+                              const mx = cx + (outerRadius + 10) * Math.cos(-RADIAN * endAngle);
+                              const my = cy + (outerRadius + 10) * Math.sin(-RADIAN * endAngle);
+                              const ex = mx;
+                              const ey = my;
+                              const textAnchor = cos >= 0 ? 'start' : 'end';
+
+                              return (
+                                <g>
+                                  <Sector
+                                    cx={cx}
+                                    cy={cy}
+                                    innerRadius={innerRadius}
+                                    outerRadius={outerRadius + 10}
+                                    startAngle={startAngle}
+                                    endAngle={endAngle}
+                                    fill={fill}
+                                  />
+                                </g>
+                              );
+                            }}
                           >
-                            {assetDistribution.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            {assets.map((entry, index) => (
+                              <Cell 
+                                key={`cell-${index}`} 
+                                fill={entry.color}
+                                stroke="transparent"
+                              />
                             ))}
                           </Pie>
                           <Tooltip 
-                            contentStyle={{ backgroundColor: '#1F2937', border: 'none' }}
-                            labelStyle={{ color: '#E5E7EB' }}
-                            itemStyle={{ color: '#0B84D4' }}
+                            contentStyle={{ 
+                              backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                              border: 'none', 
+                              borderRadius: '6px',
+                              padding: '6px 10px', 
+                              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                              zIndex: 50,
+                              fontSize: '0.51rem' 
+                            }}
+                            formatter={(value: number, name: string, entry: any) => [
+                              <div key="tooltip" className="flex flex-col gap-1 text-white" style={{ position: 'relative', zIndex: 50 }}>
+                                <div className="text-lg font-bold">${value.toLocaleString()}</div>
+                                <div className="flex items-center gap-1 text-xs">
+                                  <span style={{ color: entry.payload.color }}>{name}</span>
+                                  <span className="text-gray-300">{entry.payload.percentage.toFixed(2)}%</span>
+                                </div>
+                                <div className="text-[0.6rem] text-gray-300">
+                                  Amount: {entry.payload.amount.toLocaleString()} {name}
+                                </div>
+                                <div className="flex justify-between text-[0.6rem]">
+                                  <span>24h: <span className={entry.payload.change24h >= 0 ? 'text-green-400' : 'text-red-400'}>{entry.payload.change24h.toFixed(2)}%</span></span>
+                                  <span>7d: <span className={entry.payload.change7d >= 0 ? 'text-green-400' : 'text-red-400'}>{entry.payload.change7d.toFixed(2)}%</span></span>
+                                </div>
+                              </div>,
+                              ''
+                            ]}
+                            wrapperStyle={{ zIndex: 50 }}
                           />
-                          <Legend />
                         </PieChart>
                       </ResponsiveContainer>
+                      {selectedAsset && (
+                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center w-[90px] z-20"> 
+                          <div className="text-base font-bold text-white">${selectedAsset.value.toLocaleString()}</div>
+                          <div className="text-xs font-medium text-white">{selectedAsset.symbol}</div>
+                          <div className="text-xs text-gray-400">{selectedAsset.percentage.toFixed(2)}%</div>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="w-1/2 pl-4">
-                    <h3 className="text-white font-semibold mb-2">Quick Stats</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-[#D1D5DB]">Total Assets:</span>
-                        <span className="text-white">{assets.length}</span>
+                    <h3 className="text-white font-semibold mb-4">Portfolio Distribution</h3>
+                    <div className="space-y-3">
+                      {assets.map((asset) => (
+                        <div key={asset.symbol} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-5 w-5">
+                              <AvatarImage src={asset.logo} alt={asset.name} />
+                              <AvatarFallback>{asset.symbol}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-white text-sm">{asset.symbol}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white text-sm">{asset.percentage.toFixed(2)}%</span>
+                            <div 
+                              className="w-2 h-2 rounded-full"
+                              style={{ backgroundColor: asset.color }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-6">
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-white font-semibold">Risk Factor</h3>
+                        <span className="text-sm text-gray-400">{portfolioRisk.toFixed(1)}%</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#D1D5DB]">Best Performer:</span>
-                        <span className="text-[#4ADE80]">
-                          {assets.reduce((best, asset) => asset.change7d > best.change7d ? asset : best).symbol} 
-                          ({assets.reduce((best, asset) => asset.change7d > best.change7d ? asset : best).change7d.toFixed(2)}%)
-                        </span>
+                      <div className="h-2 w-full rounded-full overflow-hidden bg-gray-800">
+                        <div 
+                          className={`h-full transition-all duration-500 ${getRiskColor(portfolioRisk)}`}
+                          style={{ width: `${portfolioRisk}%` }}
+                        />
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#D1D5DB]">Worst Performer:</span>
-                        <span className="text-[#FF4D4D]">
-                          {assets.reduce((worst, asset) => asset.change7d < worst.change7d ? asset : worst).symbol}
-                          ({assets.reduce((worst, asset) => asset.change7d < worst.change7d ? asset : worst).change7d.toFixed(2)}%)
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#D1D5DB]">24h Change:</span>
-                        <span className={portfolioChange.value >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}>
-                          ${Math.abs(portfolioChange.value).toFixed(2)}
-                        </span>
+                      <div className="flex justify-between mt-1">
+                        <span className="text-xs text-gray-400">Low</span>
+                        <span className="text-xs text-gray-400">High</span>
                       </div>
                     </div>
                   </div>
@@ -221,25 +395,32 @@ function MainContent() {
 
                 <div className="mt-6">
                   <div className="flex items-center justify-between mb-4">
-                    <Input 
-                      placeholder="Search assets..." 
-                      className="max-w-xs bg-[#0A1929] border-gray-600 text-white"
-                    />
-                    <Button variant="outline" size="sm">
-                      <BarChart2 className="h-4 w-4 mr-2" />
-                      Portfolio Analytics
+                    <div className="flex items-center space-x-4">
+                      <Button variant="ghost" className="text-white hover:text-white hover:bg-[#1F2937]">
+                        Portfolio
+                      </Button>
+                      <Button variant="ghost" className="text-gray-400 hover:text-white hover:bg-[#1F2937]">
+                        Transactions
+                      </Button>
+                      <Button variant="ghost" className="text-gray-400 hover:text-white hover:bg-[#1F2937]">
+                        Portfolio Analytics
+                      </Button>
+                    </div>
+                    <Button className="bg-blue-500 hover:bg-blue-600 text-white">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Transaction
                     </Button>
                   </div>
 
                   <div className="rounded-lg border border-gray-800/30 overflow-hidden">
                     <div className="grid grid-cols-8 gap-4 p-2 text-sm text-[#D1D5DB] bg-[#0A1929]">
                       <div className="col-span-2">Asset</div>
-                      <div className="text-right text-sm text-white">Amount</div>
-                      <div className="text-right text-sm text-white">24h</div>
-                      <div className="text-right text-sm text-white">7d</div>
-                      <div className="text-right text-sm text-white">Price</div>
-                      <div className="text-right text-sm text-white">Value</div>
-                      <div className="text-right text-sm text-white">P/L</div>
+                      <div className="text-right">Amount</div>
+                      <div className="text-right">24h</div>
+                      <div className="text-right">7d</div>
+                      <div className="text-right">Price</div>
+                      <div className="text-right">Value</div>
+                      <div className="text-right">P/L</div>
                     </div>
                     <div className="flex flex-col">
                       {assets.map((asset, index) => (
@@ -254,7 +435,7 @@ function MainContent() {
                         >
                           <div className="col-span-2 flex items-center">
                             <Avatar className="h-6 w-6 mr-2">
-                              <AvatarImage src={`/placeholder.svg?text=${asset.symbol}`} />
+                              <AvatarImage src={asset.logo} alt={asset.name} />
                               <AvatarFallback>{asset.symbol}</AvatarFallback>
                             </Avatar>
                             <div>
@@ -262,21 +443,18 @@ function MainContent() {
                               <div className="text-xs text-[#9CA3AF]">{asset.symbol}</div>
                             </div>
                           </div>
-                          <div className="text-right text-white text-sm">{asset.amount}</div>
-                          <div className={`text-right text-white text-sm ${asset.change24h >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}`}>
+                          <div className="text-right text-white text-sm">{asset.amount.toLocaleString()}</div>
+                          <div className={`text-right text-sm ${asset.change24h >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}`}>
                             {asset.change24h.toFixed(2)}%
                           </div>
-                          <div className={`text-right text-white text-sm ${asset.change7d >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}`}>
+                          <div className={`text-right text-sm ${asset.change7d >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}`}>
                             {asset.change7d.toFixed(2)}%
                           </div>
-                          <div className="text-right text-white text-sm">${asset.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                          <div className="text-right text-white text-sm">${asset.value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                          <div className={`text-right text-white text-sm ${asset.profit >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}`}>
-                            ${Math.abs(asset.profit).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                          <div className="text-right text-white text-sm">${asset.price.toFixed(2)}</div>
+                          <div className="text-right text-white text-sm">${asset.value.toLocaleString()}</div>
+                          <div className={`text-right text-sm ${asset.profit >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}`}>
+                            ${Math.abs(asset.profit).toLocaleString()}
                           </div>
-                          <Button variant="ghost" size="icon" className="h-6 w-6">
-                            <MoreVertical className="h-3 w-3" />
-                          </Button>
                         </motion.div>
                       ))}
                     </div>
@@ -290,5 +468,3 @@ function MainContent() {
     </main>
   )
 }
-
-export { MainContent }

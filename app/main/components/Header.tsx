@@ -2,6 +2,7 @@ import { Bell, Globe, Settings, TrendingUp, User, Zap } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
+import Link from 'next/link'
 
 export function Header() {
   return (
@@ -9,7 +10,9 @@ export function Header() {
       <div className="container mx-auto px-4">
         <div className="h-16 flex items-center justify-between">
           <div className="flex items-center space-x-8">
-            <h1 className="text-xl font-bold text-white">AlphaQuant</h1>
+            <Link href="/">
+              <h1 className="text-xl font-bold text-white">AlphaQuant</h1>
+            </Link>
             <nav className="hidden md:flex space-x-6">
               <Button variant="ghost">Portfolio</Button>
               <Button variant="ghost">Signals</Button>

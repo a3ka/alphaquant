@@ -1,0 +1,216 @@
+Подскажи как мне в этом коде работать с БД? Мне надо создать отдельную БД, где для каждого заркгистрированного пользователя будет хранится его портфель криптовалют, состоящи из названия, тикера криптовалют и его количества.
+
+Мне нужно куда-то добавить код по добавлнию в базу каждым пользователем криптовалют и уих далению.
+
+Объясни как это лучше всего сделать в нашей кодовой базе.
+
+
+
+---------------
+
+
+1. Сначала нужно добавить новую таблицу в схему Prisma. Добавьте следующий код в `prisma/schema.prisma`:
+
+```prisma
+model crypto_portfolio {
+  id           Int      @id @default(autoincrement())
+  created_time DateTime @default(now())
+  user_id      String
+  coin_name    String
+  coin_ticker  String
+  amount       Float
+  user         user     @relation(fields: [user_id], references: [user_id])
+
+  @@unique([user_id, coin_ticker])
+}
+```
+
+
+2. Также нужно обновить модель `user`, добавив связь с портфелем:
+
+```prisma
+model user {
+  id                Int               @id @default(autoincrement())
+  created_time      DateTime          @default(now())
+  email             String            @unique
+  first_name        String?
+  last_name         String?
+  gender            String?
+  profile_image_url String?
+  user_id           String            @unique
+  subscription      String?
+  crypto_portfolio  crypto_portfolio[]
+}
+```
+
+
+3. Создайте новый файл для действий с портфелем `utils/actions/portfolio-actions.ts`:
+
+```typescript
+"use server";
+
+import { auth } from "@clerk/nextjs/server";
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
+
+export async function addCryptoToPortfolio(coinName: string, coinTicker: string, amount: number) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    throw new Error("Вы должны быть авторизованы");
+  }
+
+  const supabase = createServerComponentClient({ cookies });
+
+  try {
+    const { data, error } = await supabase
+      .from("crypto_portfolio")
+      .upsert({
+        user_id: userId,
+        coin_name: coinName,
+        coin_ticker: coinTicker,
+        amount: amount
+      })
+      .select();
+
+    if (error) throw error;
+    return data;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}
+
+export async function removeCryptoFromPortfolio(coinTicker: string) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    throw new Error("Вы должны быть авторизованы");
+  }
+
+  const supabase = createServerComponentClient({ cookies });
+
+  try {
+    const { data, error } = await supabase
+      .from("crypto_portfolio")
+      .delete()
+      .match({ user_id: userId, coin_ticker: coinTicker })
+      .select();
+
+    if (error) throw error;
+    return data;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}
+
+export async function getUserPortfolio() {
+  const { userId } = await auth();
+
+  if (!userId) {
+    throw new Error("Вы должны быть авторизованы");
+  }
+
+  const supabase = createServerComponentClient({ cookies });
+
+  try {
+    const { data, error } = await supabase
+      .from("crypto_portfolio")
+      .select("*")
+      .eq("user_id", userId);
+
+    if (error) throw error;
+    return data;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}
+```
+
+
+
+4. Теперь вы можете использовать эти функции в компоненте MainContent. В файле `app/main/components/MainContent.tsx` добавьте форму для управления портфелем:
+
+```typescript
+"use client";
+
+import { useState } from 'react';
+import { addCryptoToPortfolio, removeCryptoFromPortfolio } from '@/utils/actions/portfolio-actions';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+
+// Добавьте эту форму в компонент MainContent
+const AddCryptoForm = () => {
+  const [coinName, setCoinName] = useState('');
+  const [coinTicker, setCoinTicker] = useState('');
+  const [amount, setAmount] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await addCryptoToPortfolio(coinName, coinTicker, parseFloat(amount));
+      toast.success('Криптовалюта добавлена в портфель');
+      setCoinName('');
+      setCoinTicker('');
+      setAmount('');
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <Input
+        placeholder="Название монеты"
+        value={coinName}
+        onChange={(e) => setCoinName(e.target.value)}
+      />
+      <Input
+        placeholder="Тикер"
+        value={coinTicker}
+        onChange={(e) => setCoinTicker(e.target.value)}
+      />
+      <Input
+        type="number"
+        placeholder="Количество"
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+      />
+      <Button type="submit">Добавить в портфель</Button>
+    </form>
+  );
+};
+```
+
+
+
+5. После этого выполните миграцию базы данных:
+
+```bash
+npx prisma migrate dev --name add_crypto_portfolio
+```
+
+
+
+Теперь вы можете:
+
+1. Добавлять криптовалюты в портфель пользователя
+
+2. Удалять криптовалюты из портфеля
+
+3. Получать список криптовалют в портфеле
+
+Интегрируйте форму `AddCryptoForm` в компонент `MainContent` в подходящем месте, например:
+  return (
+    <main className="col-span-12 lg:col-span-6 p-6 overflow-visible">
+      <div className="container mx-auto max-w-full">
+
+
+Добавьте её в подходящее место в разметке.
+Это базовая реализация. Вы можете расширить её, добавив:
+- Валидацию данных
+- Автоматическое обновление UI после изменений
+- Подтверждение удаления
+- Редактирование существующих записей
+- Интеграцию с API для получения актуальных цен криптовалют
+Дайте знать, если нужна помощь с каким-то из этих дополнительных аспектов
