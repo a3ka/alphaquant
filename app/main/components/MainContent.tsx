@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Line, LineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Sector, ReferenceLine } from "recharts"
+import { AddTransactionDialog } from "./Add-Transaction"
 
 // Portfolio data with a clear trend
 const portfolioData = [
@@ -223,6 +224,8 @@ function useAssetsData() {
 // Основной компонент
 export function MainContent() {
   const [timeRange, setTimeRange] = useState('24H')
+  const [selectedAsset, setSelectedAsset] = useState<typeof initialAssets[0] | null>(null)
+  const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false)
   console.log('🔄 MainContent rendering...')
   
   const data = useAssetsData()
@@ -243,7 +246,8 @@ export function MainContent() {
   }
 
   console.log('🎨 Rendering full component...')
-  const { assets, selectedAsset, pieChartData } = data
+  const { assets, pieChartData } = data
+  const currentSelectedAsset = selectedAsset || data.selectedAsset
 
   const formatYAxis = (value: number) => {
     if (value >= 1000000) {
@@ -399,7 +403,7 @@ export function MainContent() {
                                 setSelectedAsset(asset);
                               }
                             }}
-                            activeIndex={pieChartData.findIndex(a => a.symbol === selectedAsset?.symbol)}
+                            activeIndex={pieChartData.findIndex(a => a.symbol === currentSelectedAsset?.symbol)}
                             activeShape={(props: any) => {
                               const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
                               return (
@@ -460,11 +464,11 @@ export function MainContent() {
                           />
                         </PieChart>
                       </ResponsiveContainer>
-                      {selectedAsset && (
+                      {currentSelectedAsset && (
                         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center w-[90px] z-20"> 
-                          <div className="text-base font-bold text-white">${selectedAsset.value.toLocaleString()}</div>
-                          <div className="text-xs font-medium text-white">{selectedAsset.symbol}</div>
-                          <div className="text-xs text-gray-400">{selectedAsset.percentage.toFixed(2)}%</div>
+                          <div className="text-base font-bold text-white">${currentSelectedAsset.value.toLocaleString()}</div>
+                          <div className="text-xs font-medium text-white">{currentSelectedAsset.symbol}</div>
+                          <div className="text-xs text-gray-400">{currentSelectedAsset.percentage.toFixed(2)}%</div>
                         </div>
                       )}
                     </div>
@@ -530,7 +534,10 @@ export function MainContent() {
                         Portfolio Analytics
                       </Button>
                     </div>
-                    <Button className="bg-blue-500 hover:bg-blue-600 text-white">
+                    <Button 
+                      onClick={() => setIsAddTransactionOpen(true)} 
+                      className="bg-blue-500 hover:bg-blue-600 text-white"
+                    >
                       <Plus className="h-4 w-4 mr-2" />
                       Add Transaction
                     </Button>
@@ -591,6 +598,10 @@ export function MainContent() {
           </div>
         </div>
       </div>
+      <AddTransactionDialog 
+        open={isAddTransactionOpen}
+        onOpenChange={setIsAddTransactionOpen}
+      />
     </main>
   )
 }
