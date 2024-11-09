@@ -9,17 +9,20 @@ datasource db {
 }
 
 model user {
-  id                 Int                  @id @default(autoincrement())
-  created_time       DateTime             @default(now())
-  email              String               @unique
-  first_name         String?
-  last_name          String?
-  gender             String?
-  profile_image_url  String?
-  user_id            String               @unique
-  subscription       String?
-  user_portfolio     user_portfolio[]
-  crypto_transaction crypto_transaction[]
+  id                Int      @id @default(autoincrement())
+  created_time      DateTime @default(now())
+  email             String   @unique
+  first_name        String?
+  last_name         String?
+  gender            String?
+  profile_image_url String?
+  user_id           String   @unique
+  subscription      String?
+  
+  portfolios        user_portfolio[]
+  transactions      crypto_transaction[]
+
+  @@index([user_id])
 }
 
 model payments {
@@ -89,38 +92,39 @@ enum TransactionType {
 }
 
 model user_portfolio {
-  id           Int           @id @default(autoincrement())
-  created_time DateTime      @default(now())
-  user_id      String
-  name         String
-  description  String?
-  type         PortfolioType
-  is_active    Boolean       @default(true)
-
-  user         user                 @relation(fields: [user_id], references: [user_id])
-  transactions crypto_transaction[]
-  balances     portfolio_balance[]
+  id              Int           @id @default(autoincrement())
+  created_time    DateTime      @default(now())
+  user_id         String
+  name            String        
+  description     String?       
+  type            PortfolioType 
+  is_active       Boolean       @default(true)
+  
+  user            user                  @relation(fields: [user_id], references: [user_id])
+  transactions    crypto_transaction[]
+  balances        portfolio_balance[]
 
   @@unique([user_id, name])
   @@index([user_id])
 }
 
 model crypto_transaction {
-  id               Int             @id @default(autoincrement())
-  created_time     DateTime        @default(now())
+  id              Int             @id @default(autoincrement())
+  created_time    DateTime        @default(now())
   transaction_time DateTime
-  portfolio_id     Int
-  user_id          String
-  coin_name        String
-  coin_ticker      String
-  amount           Float
-  price_usd        Float
-  total_usd        Float
-  type             TransactionType
-  notes            String?
+  portfolio_id    Int             
+  user_id         String
+  coin_name       String
+  coin_ticker     String
+  amount          Float           // Основная сумма операции
+  borrowed        Float?          // Сумма, взятая в долг
+  price_usd       Float
+  total_usd       Float
+  type            TransactionType
+  notes           String?
 
-  portfolio user_portfolio @relation(fields: [portfolio_id], references: [id])
-  user      user           @relation(fields: [user_id], references: [user_id])
+  portfolio       user_portfolio  @relation(fields: [portfolio_id], references: [id])
+  user            user           @relation(fields: [user_id], references: [user_id])
 
   @@index([portfolio_id, coin_ticker])
   @@index([user_id])
@@ -128,13 +132,15 @@ model crypto_transaction {
 }
 
 model portfolio_balance {
-  id           Int      @id @default(autoincrement())
-  last_updated DateTime @default(now())
-  portfolio_id Int
-  coin_ticker  String
-  amount       Float
+  id              Int           @id @default(autoincrement())
+  last_updated    DateTime      @default(now())
+  portfolio_id    Int
+  coin_ticker     String
+  amount          Float         @default(0)
+  borrowed        Float         @default(0)
+  in_collateral   Float         @default(0)
 
-  portfolio user_portfolio @relation(fields: [portfolio_id], references: [id])
+  portfolio       user_portfolio @relation(fields: [portfolio_id], references: [id])
 
   @@unique([portfolio_id, coin_ticker])
   @@index([portfolio_id])
