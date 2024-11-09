@@ -7,18 +7,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ArrowUpRight } from 'lucide-react'
 import { useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
-import { AuthModal } from '@/components/auth/auth-modal'
 import { UserProfile } from '@/components/user-profile'
-
 import ParticleBackground from '@/components/ParticleBackground'
 import SignalFlowVisualization from '@/components/SignalFlowVisualization'
-import AIChat from '@/components/AIChat'
-import AsciiCharacter from '@/components/AsciiCharacter'
 import Navbar from '@/components/Navbar'
 
 export default function LandingPage() {
   const [isMobile, setIsMobile] = useState(false)
-  const [isAIChatOpen, setIsAIChatOpen] = useState(false)
 
   useEffect(() => {
     const checkMobile = () => {
@@ -33,7 +28,7 @@ export default function LandingPage() {
     <div className="h-screen w-screen bg-[#0A0B0D] bg-opacity-95 text-white overflow-hidden relative">
       <ParticleBackground>
         <div className="flex flex-col h-full">
-        <Navbar />
+          <Navbar />
           <main className="flex-grow container mx-auto px-3 sm:px-4 py-4 sm:py-6 lg:py-8 flex items-center">
             <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 items-center">
               <LandingPageContent />
@@ -42,13 +37,6 @@ export default function LandingPage() {
               </div>
             </div>
           </main>
-          <div 
-            className="absolute left-4 bottom-4 z-10"
-            onClick={() => setIsAIChatOpen(true)}
-          >
-            <AsciiCharacter />
-          </div>
-          <AIChat isOpen={isAIChatOpen} onClose={() => setIsAIChatOpen(false)} />
         </div>
       </ParticleBackground>
     </div>
@@ -58,8 +46,6 @@ export default function LandingPage() {
 function LandingPageContent() {
   const { user } = useUser();
   const router = useRouter();
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<'sign-in' | 'sign-up'>('sign-in');
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -101,22 +87,15 @@ function LandingPageContent() {
             if (user?.id) {
               router.push("/main")
             } else {
-              setShowAuthModal(true)
-              setAuthMode('sign-in')
+              router.push("/sign-in")
             }
           }}
           className="h-8 sm:h-10 md:h-12 px-4 sm:px-6 md:px-8 text-xs sm:text-sm md:text-base lg:text-lg bg-gradient-to-r from-[#003366] to-[#0066CC] hover:from-[#002244] hover:to-[#004499] text-white border-none rounded-lg transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,102,255,0.5)] hover:brightness-110"
         >
-          Start Trading
+          Activate Alpha
           <ArrowUpRight className="ml-2 h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5" />
         </Button>
       </motion.div>
-      <AuthModal 
-        isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)}
-        mode={authMode}
-        onModeChange={setAuthMode}
-      />
     </div>
   )
 }
