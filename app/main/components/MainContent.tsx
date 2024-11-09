@@ -236,6 +236,14 @@ export function MainContent() {
     pieChartLength: data?.pieChartData?.length
   })
 
+  const highestValue = useMemo(() => 
+    Math.max(...portfolioData.map(item => item.value))
+  , []);
+  
+  const highestValueDate = useMemo(() => 
+    portfolioData.find(item => item.value === highestValue)?.date
+  , [highestValue]);
+
   if (!data) {
     console.log('⏳ Loading state...')
     return (
@@ -281,6 +289,13 @@ export function MainContent() {
     return 'bg-red-500'
   }
 
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString('en-US', { 
+      month: 'short',
+      year: '2-digit'
+    });
+  };
+
   return (
     <main className="col-span-12 lg:col-span-6 p-6 overflow-visible">
       <div className="container mx-auto max-w-full">
@@ -321,10 +336,7 @@ export function MainContent() {
                       <XAxis 
                         dataKey="date" 
                         stroke="#9CA3AF"
-                        tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { 
-                          month: 'short',
-                          year: '2-digit'
-                        })}
+                        tickFormatter={(value) => formatDate(value)}
                         tick={{ fontSize: 11 }}
                         dy={10}
                       />
