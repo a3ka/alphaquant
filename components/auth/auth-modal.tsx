@@ -1,8 +1,12 @@
 "use client"
 
 import { SignUp, SignIn } from "@clerk/nextjs"
+import { dark } from "@clerk/themes"
+import type { Appearance } from "@clerk/types"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
 
 interface AuthModalProps {
   isOpen: boolean
@@ -12,8 +16,19 @@ interface AuthModalProps {
 }
 
 export const AuthModal = ({ isOpen, onClose, mode, onModeChange }: AuthModalProps) => {
-  const appearance = {
-    baseTheme: 'dark',
+  const [isMounted, setIsMounted] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return null;
+  }
+
+  const appearance: Appearance = {
+    baseTheme: dark,
     elements: {
       rootBox: "mx-auto",
       card: "bg-[#0A1929] backdrop-blur-sm border border-[#1E293B] shadow-xl",
@@ -32,13 +47,8 @@ export const AuthModal = ({ isOpen, onClose, mode, onModeChange }: AuthModalProp
     },
     layout: {
       socialButtonsPlacement: "bottom" as const,
-      footerActionLink: {
-        onClick: (e: any) => {
-          e.preventDefault();
-          const newMode = mode === 'sign-in' ? 'sign-up' : 'sign-in';
-          onModeChange(newMode);
-        }
-      }
+      showOptionalFields: false,
+      shimmer: true
     }
   }
 
@@ -52,8 +62,8 @@ export const AuthModal = ({ isOpen, onClose, mode, onModeChange }: AuthModalProp
           <SignUp 
             appearance={appearance}
             routing="hash"
+            afterSignInUrl="/main"
             afterSignUpUrl="/main"
-            signInUrl="/sign-in"
             redirectUrl="/main"
           />
         ) : (
@@ -61,11 +71,12 @@ export const AuthModal = ({ isOpen, onClose, mode, onModeChange }: AuthModalProp
             appearance={appearance}
             routing="hash"
             afterSignInUrl="/main"
-            signUpUrl="/sign-up"
+            afterSignUpUrl="/main"
             redirectUrl="/main"
           />
         )}
       </DialogContent>
     </Dialog>
-  )
-} 
+  );
+}; 
+  

@@ -13,7 +13,15 @@ if (config.auth.enabled) {
 }
 
 const isProtectedRoute = config.auth.enabled
-  ? createRouteMatcher(["/dashboard(.*)", "/main(.*)"])
+  ? createRouteMatcher([
+      "/dashboard/(.*)", 
+      "/main/(.*)", 
+      "/main",
+      "!/",
+      "!/sign-in/(.*)",
+      "!/sign-up/(.*)",
+      "!/(.*)"  // Добавляем исключение для корневого маршрута
+    ])
   : () => false;
 
 export default function middleware(req: any) {

@@ -33,7 +33,7 @@ export default function LandingPage() {
     <div className="h-screen w-screen bg-[#0A0B0D] bg-opacity-95 text-white overflow-hidden relative">
       <ParticleBackground>
         <div className="flex flex-col h-full">
-          <Navbar />
+        <Navbar />
           <main className="flex-grow container mx-auto px-3 sm:px-4 py-4 sm:py-6 lg:py-8 flex items-center">
             <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 items-center">
               <LandingPageContent />
