@@ -2,16 +2,25 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowUp, Plus, Loader2 } from 'lucide-react'
+import { ArrowUp, Plus, Loader2, Pencil } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Line, LineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Sector, ReferenceLine } from "recharts"
 import { AddTransactionDialog } from "./Add-Transaction"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./Select"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { useUser } from "@clerk/nextjs"
+import type { Portfolio } from '@/utils/supabase'
+import { PortfolioSelector } from './PortfolioSelector'
 
 // Portfolio data with a clear trend
 const portfolioData = [
+  { date: '2024-01-07', value: 350000 },
   { date: '2023-08-01', value: 0 },
   { date: '2023-09-01', value: 50000 },
   { date: '2023-10-01', value: 120000 },
@@ -160,7 +169,7 @@ const initialAssets = [
   }
 ]
 
-// Выносим логику загрузки данных в отдельный хук
+// Выноси логику загруз данных в отдельный хук
 function useAssetsData() {
   const [data, setData] = useState<{
     assets: typeof initialAssets,
@@ -199,7 +208,7 @@ function useAssetsData() {
         console.log('🥧 Pie chart data length:', pieChartData.length)
 
         if (mounted) {
-          console.log('💾 Setting data...')
+          console.log(' Setting data...')
           setData({
             assets,
             selectedAsset,
@@ -250,7 +259,7 @@ const generateDataForTimeRange = (range: TimeRangeType) => {
   switch (range) {
     case '24H':
       startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-      interval = 60 * 60 * 1000 // каждый час
+      interval = 60 * 60 * 1000 // кд час
       break
     case '1W':
       startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
@@ -262,7 +271,7 @@ const generateDataForTimeRange = (range: TimeRangeType) => {
       break
     case '3M':
       startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
-      interval = 7 * 24 * 60 * 60 * 1000 // каждая неделя
+      interval = 7 * 24 * 60 * 60 * 1000 // кажня неделя
       break
     case '6M':
       startDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000)
@@ -319,29 +328,54 @@ const getDateFormatter = (range: TimeRangeType) => {
 
 // Основной компонент
 export function MainContent() {
+  const { user } = useUser()
+  const [selectedPortfolio, setSelectedPortfolio] = useState<Portfolio | null>(null)
+  
+  // Добавляем к существующим useState
   const [timeRange, setTimeRange] = useState<TimeRangeType>('24H')
-  const [chartData, setChartData] = useState(generateDataForTimeRange('24H'))
   const [selectedAsset, setSelectedAsset] = useState<typeof initialAssets[0] | null>(null)
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false)
+  const [chartData, setChartData] = useState(portfolioData)
+  const [error, setError] = useState<string | null>(null)
 
-  // Обновляем данные при изменении временного диапазона
-  useEffect(() => {
-    setChartData(generateDataForTimeRange(timeRange))
-  }, [timeRange])
+  const handlePortfolioChange = (portfolio: Portfolio) => {
+    setSelectedPortfolio(portfolio)
+    // Здесь можно добавить логику обновления графиков и данных
+    setChartData(portfolio.data.chartData)
+  }
 
-  const data = useAssetsData()
-
+  // 2. Все useMemo хуки
   const highestValue = useMemo(() => 
-    Math.max(...chartData.map(item => item.value))
-  , [chartData])
+    Math.max(...portfolioData.map(item => item.value))
+  , [])
   
   const lowestValue = useMemo(() => 
-    Math.min(...chartData.map(item => item.value))
-  , [chartData])
+    Math.min(...portfolioData.map(item => item.value))
+  , [])
+
+  const highestValueDate = useMemo(() => 
+    portfolioData.find(item => item.value === highestValue)?.date
+  , [highestValue])
 
   const dateFormatter = useMemo(() => 
     getDateFormatter(timeRange)
   , [timeRange])
+
+  // 3. Все useEffect хуки
+  useEffect(() => {
+    setChartData(generateDataForTimeRange(timeRange))
+  }, [timeRange])
+
+  // 4. Получение данных
+  const data = useAssetsData()
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-red-500">
+        {error}
+      </div>
+    )
+  }
 
   if (!data) {
     return (
@@ -397,30 +431,33 @@ export function MainContent() {
     <main className="col-span-12 lg:col-span-6 p-6 overflow-visible">
       <div className="container mx-auto max-w-full">
         <div className="grid grid-cols-12 gap-4">
-          <div className="col-span-12 rounded-lg border border-gray-800/30 bg-[#010714] shadow-lg">
+          <div className="col-span-12 rounded-lg border border-gray-800/30 bg-[#010714] shadow-lg -mx-6">
             <Card className="bg-transparent">
               <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-white text-xl font-semibold">Portfolio Overview</CardTitle>
-                  <Tabs 
-                    value={timeRange} 
-                    onValueChange={(value) => setTimeRange(value as TimeRangeType)}
-                    className="bg-[#1F2937] rounded-lg p-1"
-                  >
-                    <TabsList className="grid grid-cols-7 gap-1">
-                      {timeRanges.map((range) => (
-                        <TabsTrigger
-                          key={range.value}
-                          value={range.value}
-                          className="px-3 py-1.5 text-sm font-medium transition-all
-                            data-[state=active]:bg-[#374151] data-[state=active]:text-white
-                            data-[state=inactive]:text-gray-400 hover:text-white"
-                        >
-                          {range.label}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                  </Tabs>
+                <div className="flex flex-col gap-3">
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-white text-xl font-semibold">Portfolio Overview</CardTitle>
+                    <Tabs 
+                      value={timeRange} 
+                      onValueChange={(value) => setTimeRange(value as TimeRangeType)}
+                      className="bg-[#1F2937] rounded-lg p-0.5"
+                    >
+                      <TabsList className="grid grid-cols-7 gap-0.5">
+                        {timeRanges.map((range) => (
+                          <TabsTrigger
+                            key={range.value}
+                            value={range.value}
+                            className="px-2 py-1 text-xs font-medium transition-all
+                              data-[state=active]:bg-[#374151] data-[state=active]:text-white
+                              data-[state=inactive]:text-gray-400 hover:text-white"
+                          >
+                            {range.label}
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
+                    </Tabs>
+                  </div>
+                  <PortfolioSelector onPortfolioChange={handlePortfolioChange} />
                 </div>
               </CardHeader>
               <CardContent>
@@ -632,24 +669,7 @@ export function MainContent() {
 
                 <div className="mt-6">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-4">
-                      <Button variant="ghost" className="text-white hover:text-white hover:bg-[#1F2937]">
-                        Portfolio
-                      </Button>
-                      <Button variant="ghost" className="text-gray-400 hover:text-white hover:bg-[#1F2937]">
-                        Transactions
-                      </Button>
-                      <Button variant="ghost" className="text-gray-400 hover:text-white hover:bg-[#1F2937]">
-                        Portfolio Analytics
-                      </Button>
-                    </div>
-                    <Button 
-                      onClick={() => setIsAddTransactionOpen(true)} 
-                      className="bg-blue-500 hover:bg-blue-600 text-white"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Transaction
-                    </Button>
+                    <PortfolioSelector onPortfolioChange={handlePortfolioChange} />
                   </div>
 
                   <div className="rounded-lg border border-gray-800/30 overflow-hidden">

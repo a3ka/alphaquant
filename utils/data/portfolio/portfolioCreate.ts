@@ -26,7 +26,7 @@ export const portfolioCreate = async ({
     {
       cookies: {
         get(name: string) {
-          return cookieStore.get(name)?.value;
+          return cookieStore.get(name)?.value
         },
       },
     }
