@@ -12,8 +12,9 @@ export const userCreate = async ({
   profile_image_url,
   user_id,
 }: userCreateProps) => {
+  console.log('Starting user creation process for:', { user_id, email });
+  
   const cookieStore = await cookies();
-
   const supabase = createServerClient(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_KEY!,
@@ -40,8 +41,8 @@ export const userCreate = async ({
       ])
       .select();
 
-    console.log("data", data);
-    console.log("error", error);
+    console.log("UserCreate-data", data);
+    console.log("UserCreate-error", error);
 
     if (error?.code) return error;
 
@@ -54,10 +55,12 @@ export const userCreate = async ({
       is_active: true
     };
 
+    console.log('Creating default portfolio:', portfolioData);
+
     const portfolioResult = await portfolioCreate(portfolioData);
+    console.log('Portfolio creation result:', portfolioResult);
     
     if (portfolioResult && 'code' in portfolioResult) {
-
       console.error('Error creating portfolio:', portfolioResult);
       // Возвращаем пользователя даже если создание портфеля не удалось
       return data;
@@ -66,6 +69,7 @@ export const userCreate = async ({
     if (error?.code) return error;
     return data;
   } catch (error: any) {
+    console.error('Unexpected error in userCreate:', error);
     throw new Error(error.message);
   }
 };

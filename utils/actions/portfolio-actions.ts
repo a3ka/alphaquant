@@ -5,15 +5,22 @@ import { cookies } from "next/headers"
 import type { Portfolio } from '@/utils/supabase'
 
 const getSupabaseClient = async () => {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  const supabaseUrl = process.env.SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_KEY
+  
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('Missing env vars:', { 
+      hasUrl: !!supabaseUrl, 
+      hasKey: !!supabaseKey 
+    })
     throw new Error('Supabase configuration is missing')
   }
 
   const cookieStore = await cookies()
   
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         get(name: string) {
@@ -25,11 +32,12 @@ const getSupabaseClient = async () => {
 }
 
 export async function getUserPortfolios(userId: string): Promise<Portfolio[]> {
+  console.log('getUserPortfolios called with userId:', userId)
   try {
     const supabase = await getSupabaseClient()
     
     const { data, error } = await supabase
-      .from("portfolios")
+      .from("user_portfolio")
       .select(`
         id,
         user_id,
@@ -37,17 +45,40 @@ export async function getUserPortfolios(userId: string): Promise<Portfolio[]> {
         type,
         description,
         is_active,
-        created_at,
-        updated_at,
-        margin_data
+        created_time
       `)
       .eq("user_id", userId)
-      .order("created_at", { ascending: true })
+      .eq("is_active", true)
 
-    if (error) throw error
-    return data as Portfolio[]
+    console.log('Raw query result:', { data, error })
+
+    if (error) {
+      console.error('Supabase error:', error)
+      throw error
+    }
+
+    const portfolios: Portfolio[] = data.map(portfolio => ({
+      id: portfolio.id.toString(),
+      user_id: portfolio.user_id,
+      name: portfolio.name,
+      type: portfolio.type.toLowerCase(),
+      description: portfolio.description || '',
+      is_active: portfolio.is_active,
+      created_at: portfolio.created_time,
+      updated_at: portfolio.created_time,
+      data: {
+        assets: [],
+        pieChartData: [],
+        chartData: [],
+        totalValue: 0,
+        totalProfit: 0,
+        profitPercentage: 0
+      }
+    }))
+
+    return portfolios
   } catch (error: any) {
-    console.error('Failed to get portfolios:', error)
+    console.error('getUserPortfolios error:', error)
     return []
   }
 }

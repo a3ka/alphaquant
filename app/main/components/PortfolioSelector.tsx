@@ -30,19 +30,31 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
 
   useEffect(() => {
     const loadPortfolios = async () => {
-      if (!user?.id) return
+      console.log('Starting loadPortfolios function')
+      console.log('Current user:', user)
+      
+      if (!user?.id) {
+        console.log('No user ID found')
+        return
+      }
+      
       try {
+        console.log('Calling getUserPortfolios with userId:', user.id)
         const data = await getUserPortfolios(user.id)
+        console.log('Data received from getUserPortfolios:', data)
+        
         if (Array.isArray(data)) {
           setPortfolios([FakePortfolio, ...data])
         } else {
+          console.error('Data is not an array:', data)
           setError('Failed to load portfolios')
         }
       } catch (error) {
+        console.error('Portfolio loading error:', error)
         setError('Failed to connect to the database')
-        console.error('Failed to load portfolios:', error)
       }
     }
+
     loadPortfolios()
   }, [user?.id])
 
