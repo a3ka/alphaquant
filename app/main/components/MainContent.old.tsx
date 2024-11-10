@@ -12,15 +12,14 @@ import { AddTransactionDialog } from "./Add-Transaction"
 
 // Portfolio data with a clear trend
 const portfolioData = [
-  { date: '2023-08-01', value: 0 },
-  { date: '2023-09-01', value: 50000 },
-  { date: '2023-10-01', value: 120000 },
-  { date: '2023-11-01', value: 150000 },
-  { date: '2023-12-01', value: 179145 }, // Low point
   { date: '2024-01-01', value: 250000 },
-  { date: '2024-02-01', value: 320000 },
-  { date: '2024-03-01', value: 411937 }, // High point
-  { date: '2024-04-01', value: 299441 }
+  { date: '2024-01-02', value: 280000 },
+  { date: '2024-01-03', value: 472576 },
+  { date: '2024-01-04', value: 450000 },
+  { date: '2024-01-05', value: 420000 },
+  { date: '2024-01-06', value: 380000 },
+  { date: '2024-01-07', value: 350000 },
+  { date: '2024-01-08', value: 299441 }
 ]
 
 // Find the highest value in portfolio data
@@ -222,128 +221,31 @@ function useAssetsData() {
   return data
 }
 
-// Определяем типы для временных диапазонов
-type TimeRangeType = '24H' | '1W' | '1M' | '3M' | '6M' | '1Y' | 'ALL'
-
-interface TimeRange {
-  value: TimeRangeType
-  label: string
-}
-
-const timeRanges: TimeRange[] = [
-  { value: '24H', label: '24H' },
-  { value: '1W', label: '1W' },
-  { value: '1M', label: '1M' },
-  { value: '3M', label: '3M' },
-  { value: '6M', label: '6M' },
-  { value: '1Y', label: '1Y' },
-  { value: 'ALL', label: 'ALL' }
-]
-
-// Функция для генерации данных в зависимости от временного диапазона
-const generateDataForTimeRange = (range: TimeRangeType) => {
-  const now = new Date()
-  const data = []
-  let startDate: Date
-  let interval: number
-  
-  switch (range) {
-    case '24H':
-      startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-      interval = 60 * 60 * 1000 // каждый час
-      break
-    case '1W':
-      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      interval = 24 * 60 * 60 * 1000 // каждый день
-      break
-    case '1M':
-      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-      interval = 24 * 60 * 60 * 1000 // каждый день
-      break
-    case '3M':
-      startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
-      interval = 7 * 24 * 60 * 60 * 1000 // каждая неделя
-      break
-    case '6M':
-      startDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000)
-      interval = 14 * 24 * 60 * 60 * 1000 // каждые две недели
-      break
-    case '1Y':
-      startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
-      interval = 30 * 24 * 60 * 60 * 1000 // каждый месяц
-      break
-    case 'ALL':
-      return portfolioData // используем существующие данные
-  }
-
-  for (let date = startDate; date <= now; date = new Date(date.getTime() + interval)) {
-    // Генерируем значение с некоторой случайностью, но с общим трендом
-    const baseValue = 300000
-    const randomFactor = Math.random() * 50000 - 25000
-    const trendFactor = ((date.getTime() - startDate.getTime()) / (now.getTime() - startDate.getTime())) * 50000
-    
-    data.push({
-      date: date.toISOString(),
-      value: baseValue + randomFactor + trendFactor
-    })
-  }
-  
-  return data
-}
-
-// Функция форматирования даты в зависимости от временного диапазона
-const getDateFormatter = (range: TimeRangeType) => {
-  switch (range) {
-    case '24H':
-      return (date: string) => new Date(date).toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    case '1W':
-      return (date: string) => new Date(date).toLocaleDateString('en-US', {
-        weekday: 'short'
-      })
-    case '1M':
-    case '3M':
-      return (date: string) => new Date(date).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric'
-      })
-    default:
-      return (date: string) => new Date(date).toLocaleDateString('en-US', {
-        month: 'short',
-        year: '2-digit'
-      })
-  }
-}
-
 // Основной компонент
 export function MainContent() {
-  const [timeRange, setTimeRange] = useState<TimeRangeType>('24H')
-  const [chartData, setChartData] = useState(generateDataForTimeRange('24H'))
+  const [timeRange, setTimeRange] = useState('24H')
   const [selectedAsset, setSelectedAsset] = useState<typeof initialAssets[0] | null>(null)
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false)
-
-  // Обновляем данные при изменении временного диапазона
-  useEffect(() => {
-    setChartData(generateDataForTimeRange(timeRange))
-  }, [timeRange])
-
+  console.log('🔄 MainContent rendering...')
+  
   const data = useAssetsData()
+  console.log('📦 Current data state:', {
+    hasData: !!data,
+    assetsLength: data?.assets?.length,
+    selectedAsset: data?.selectedAsset?.symbol,
+    pieChartLength: data?.pieChartData?.length
+  })
 
   const highestValue = useMemo(() => 
-    Math.max(...chartData.map(item => item.value))
-  , [chartData])
+    Math.max(...portfolioData.map(item => item.value))
+  , []);
   
-  const lowestValue = useMemo(() => 
-    Math.min(...chartData.map(item => item.value))
-  , [chartData])
-
-  const dateFormatter = useMemo(() => 
-    getDateFormatter(timeRange)
-  , [timeRange])
+  const highestValueDate = useMemo(() => 
+    portfolioData.find(item => item.value === highestValue)?.date
+  , [highestValue]);
 
   if (!data) {
+    console.log('⏳ Loading state...')
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
@@ -351,6 +253,7 @@ export function MainContent() {
     )
   }
 
+  console.log('🎨 Rendering full component...')
   const { assets, pieChartData } = data
   const currentSelectedAsset = selectedAsset || data.selectedAsset
 
@@ -402,23 +305,12 @@ export function MainContent() {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-white text-xl font-semibold">Portfolio Overview</CardTitle>
-                  <Tabs 
-                    value={timeRange} 
-                    onValueChange={(value) => setTimeRange(value as TimeRangeType)}
-                    className="bg-[#1F2937] rounded-lg p-1"
-                  >
-                    <TabsList className="grid grid-cols-7 gap-1">
-                      {timeRanges.map((range) => (
-                        <TabsTrigger
-                          key={range.value}
-                          value={range.value}
-                          className="px-3 py-1.5 text-sm font-medium transition-all
-                            data-[state=active]:bg-[#374151] data-[state=active]:text-white
-                            data-[state=inactive]:text-gray-400 hover:text-white"
-                        >
-                          {range.label}
-                        </TabsTrigger>
-                      ))}
+                  <Tabs value={timeRange} onValueChange={setTimeRange}>
+                    <TabsList>
+                      <TabsTrigger value="24H">24H</TabsTrigger>
+                      <TabsTrigger value="7D">7D</TabsTrigger>
+                      <TabsTrigger value="1M">1M</TabsTrigger>
+                      <TabsTrigger value="ALL">ALL</TabsTrigger>
                     </TabsList>
                   </Tabs>
                 </div>
@@ -434,7 +326,7 @@ export function MainContent() {
 
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
+                    <LineChart data={portfolioData}>
                       <CartesianGrid 
                         strokeDasharray="3 3" 
                         stroke="#1F2937" 
@@ -444,10 +336,9 @@ export function MainContent() {
                       <XAxis 
                         dataKey="date" 
                         stroke="#9CA3AF"
-                        tickFormatter={dateFormatter}
+                        tickFormatter={(value) => formatDate(value)}
                         tick={{ fontSize: 11 }}
                         dy={10}
-                        interval="preserveStartEnd"
                       />
                       <YAxis 
                         stroke="#9CA3AF"
@@ -455,8 +346,6 @@ export function MainContent() {
                         width={60}
                         tick={{ fontSize: 11 }}
                         dx={-10}
-                        domain={['dataMin', 'dataMax']}
-                        padding={{ top: 20, bottom: 20 }}
                       />
                       <Tooltip 
                         contentStyle={{ 
@@ -487,6 +376,20 @@ export function MainContent() {
                           <stop offset="95%" stopColor="#EC4899" stopOpacity={1}/>
                         </linearGradient>
                       </defs>
+                      {highestValueDate && (
+                        <ReferenceLine
+                          x={highestValueDate}
+                          stroke="#8B5CF6"
+                          strokeDasharray="3 3"
+                          label={{
+                            position: 'top',
+                            value: `High: $${highestValue.toLocaleString()}`,
+                            fill: '#E5E7EB',
+                            fontSize: 12,
+                            offset: 20
+                          }}
+                        />
+                      )}
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
