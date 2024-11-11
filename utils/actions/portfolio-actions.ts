@@ -130,4 +130,19 @@ export async function createPortfolio(
     console.error('Failed to create portfolio:', error)
     throw new Error(error.message)
   }
+}
+
+export async function deletePortfolio(portfolioId: string) {
+  try {
+    const supabase = await getSupabaseClient()
+    
+    const { error } = await supabase
+      .from("user_portfolio")
+      .delete()
+      .eq("id", portfolioId)
+
+    if (error) throw error
+  } catch (error: any) {
+    throw new Error(error.message)
+  }
 } 

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Portfolio } from '@/utils/supabase'
-import { getUserPortfolios, updatePortfolioName, createPortfolio } from '@/utils/actions/portfolio-actions'
+import { getUserPortfolios, updatePortfolioName, createPortfolio, deletePortfolio } from '@/utils/actions/portfolio-actions'
 import { useUser } from '@clerk/nextjs'
 import { FakePortfolio } from '@/app/data/fakePortfolio'
 
@@ -86,6 +86,23 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
     }
   }
 
+  const handleDeletePortfolio = async () => {
+    if (!selectedPortfolio?.id || selectedPortfolio.id === 'fake-portfolio') return
+    
+    try {
+      await deletePortfolio(selectedPortfolio.id)
+      setPortfolios(portfolios.filter(p => p.id !== selectedPortfolio.id))
+      setIsEditNameOpen(false)
+      
+      if (selectedPortfolio.id === selectedPortfolio.id) {
+        setSelectedPortfolio(FakePortfolio)
+        onPortfolioChange(FakePortfolio)
+      }
+    } catch (error) {
+      console.error('Failed to delete portfolio:', error)
+    }
+  }
+
   return (
     <>
       <Select
@@ -107,25 +124,34 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
         </SelectTrigger>
         <SelectContent>
           {portfolios.map((portfolio) => (
-            <SelectItem 
-              key={portfolio.id} 
-              value={portfolio.id}
-              className="text-white text-sm hover:bg-[#374151] group"
-            >
-              <div className="flex items-center justify-between w-full">
+            <div key={portfolio.id} className="relative">
+              <SelectItem 
+                value={portfolio.id}
+                className="text-white text-sm hover:bg-[#374151] group pr-8"
+              >
                 <span>{portfolio.id === 'fake-portfolio' ? 'Demo Portfolio' : portfolio.name}</span>
-                {portfolio.id !== 'fake-portfolio' && (
-                  <Pencil 
-                    className="h-3 w-3 opacity-0 group-hover:opacity-100 cursor-pointer ml-2"
-                    onClick={(e) => {
-                      e.stopPropagation()
+              </SelectItem>
+              {portfolio.id !== 'fake-portfolio' && (
+                <div
+                  className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    const selectTrigger = document.querySelector('[role="combobox"]')
+                    if (selectTrigger instanceof HTMLElement) {
+                      selectTrigger.click()
+                    }
+                    setTimeout(() => {
+                      setNewName(portfolio.name)
                       setSelectedPortfolio(portfolio)
                       setIsEditNameOpen(true)
-                    }}
-                  />
-                )}
-              </div>
-            </SelectItem>
+                    }, 50)
+                  }}
+                >
+                  <Pencil className="h-3 w-3 text-gray-400 hover:text-white" />
+                </div>
+              )}
+            </div>
           ))}
           <SelectItem value="add" className="text-blue-500 text-sm hover:bg-[#374151]">
             <Plus className="h-3 w-3 mr-2 inline-block" />
@@ -134,24 +160,55 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
         </SelectContent>
       </Select>
 
-      <Dialog open={isEditNameOpen} onOpenChange={setIsEditNameOpen}>
-        <DialogContent>
+      <Dialog 
+        open={isEditNameOpen} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsEditNameOpen(false)
+            setNewName('')
+          } else {
+            setIsEditNameOpen(true)
+          }
+        }}
+      >
+        <DialogContent className="bg-[#1F2937] border border-gray-800">
           <DialogHeader>
-            <DialogTitle>Edit Portfolio Name</DialogTitle>
+            <DialogTitle className="text-white">Edit Portfolio</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>New Name</Label>
+              <Label className="text-gray-300">New Name</Label>
               <Input 
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="Enter new name"
+                placeholder="New Portfolio Name"
+                className="bg-[#374151] border-gray-700 text-white placeholder:text-gray-500 focus:ring-blue-500"
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditNameOpen(false)}>Cancel</Button>
-            <Button onClick={handleUpdateName}>Save</Button>
+          <DialogFooter className="flex justify-between">
+            <Button 
+              variant="destructive" 
+              onClick={handleDeletePortfolio}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsEditNameOpen(false)}
+                className="bg-transparent border-gray-600 text-gray-400 hover:bg-gray-800 hover:text-white"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleUpdateName}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Save
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
