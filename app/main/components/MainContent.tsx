@@ -340,8 +340,20 @@ export function MainContent() {
 
   const handlePortfolioChange = (portfolio: Portfolio) => {
     setSelectedPortfolio(portfolio)
-    // Здесь можно добавить логику обновления графиков и данных
-    setChartData(portfolio.data.chartData)
+    
+    if (portfolio.id === 'fake-portfolio') {
+      // Используем демо-данные
+      setChartData(portfolioData)
+      setSelectedAsset(null)
+    } else {
+      // Для реального портфеля используем его данные или показываем пустое состояние
+      if (!portfolio.data || !portfolio.data.chartData) {
+        setChartData([])
+        setSelectedAsset(null)
+      } else {
+        setChartData(portfolio.data.chartData)
+      }
+    }
   }
 
   // 2. Все useMemo хуки
@@ -427,6 +439,11 @@ export function MainContent() {
     });
   };
 
+  // В начале компонента MainContent добавим проверку на пустой портфель
+  const isEmptyPortfolio = selectedPortfolio && 
+    selectedPortfolio.id !== 'fake-portfolio' && 
+    (!selectedPortfolio.data || !selectedPortfolio.data.chartData || selectedPortfolio.data.chartData.length === 0)
+
   return (
     <main className="col-span-12 lg:col-span-6 p-6 overflow-visible">
       <div className="container mx-auto max-w-full">
@@ -437,215 +454,243 @@ export function MainContent() {
                 <div className="flex flex-col gap-3">
                   <div className="flex justify-between items-center">
                     <CardTitle className="text-white text-xl font-semibold">Portfolio Overview</CardTitle>
-                    <Tabs 
-                      value={timeRange} 
-                      onValueChange={(value) => setTimeRange(value as TimeRangeType)}
-                      className="bg-[#1F2937] rounded-lg p-0.5"
-                    >
-                      <TabsList className="grid grid-cols-7 gap-0.5">
-                        {timeRanges.map((range) => (
-                          <TabsTrigger
-                            key={range.value}
-                            value={range.value}
-                            className="px-2 py-1 text-xs font-medium transition-all
-                              data-[state=active]:bg-[#374151] data-[state=active]:text-white
-                              data-[state=inactive]:text-gray-400 hover:text-white"
-                          >
-                            {range.label}
-                          </TabsTrigger>
-                        ))}
-                      </TabsList>
-                    </Tabs>
+                    {!isEmptyPortfolio && (
+                      <Tabs 
+                        value={timeRange} 
+                        onValueChange={(value) => setTimeRange(value as TimeRangeType)}
+                        className="bg-[#1F2937] rounded-lg p-0.5"
+                      >
+                        <TabsList className="bg-transparent border-0">
+                          {timeRanges.map((range) => (
+                            <TabsTrigger 
+                              key={range.value} 
+                              value={range.value}
+                              className="data-[state=active]:bg-[#374151] text-gray-400 data-[state=active]:text-white"
+                            >
+                              {range.label}
+                            </TabsTrigger>
+                          ))}
+                        </TabsList>
+                      </Tabs>
+                    )}
                   </div>
                   <PortfolioSelector onPortfolioChange={handlePortfolioChange} />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="mb-6">
-                  <div className="text-3xl font-bold text-white">$299441.37</div>
-                  <div className="flex items-center text-[#4ADE80]">
-                    <ArrowUp className="h-4 w-4 mr-1" />
-                    1.75% ($5143.97)
+                {isEmptyPortfolio ? (
+                  <div className="flex flex-col items-center justify-center h-[300px] text-gray-400">
+                    <div className="text-lg mb-2">No data available</div>
+                    <div className="text-sm">Add transactions to see portfolio analytics</div>
+                    <Button 
+                      onClick={() => setIsAddTransactionOpen(true)}
+                      className="mt-4 bg-blue-500 hover:bg-blue-600"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add First Transaction
+                    </Button>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="mb-6">
+                      <div className="text-3xl font-bold text-white">$299441.37</div>
+                      <div className="flex items-center text-[#4ADE80]">
+                        <ArrowUp className="h-4 w-4 mr-1" />
+                        1.75% ($5143.97)
+                      </div>
+                    </div>
 
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
-                      <CartesianGrid 
-                        strokeDasharray="3 3" 
-                        stroke="#1F2937" 
-                        horizontal={true} 
-                        vertical={false} 
-                      />
-                      <XAxis 
-                        dataKey="date" 
-                        stroke="#9CA3AF"
-                        tickFormatter={dateFormatter}
-                        tick={{ fontSize: 11 }}
-                        dy={10}
-                        interval="preserveStartEnd"
-                      />
-                      <YAxis 
-                        stroke="#9CA3AF"
-                        tickFormatter={formatYAxis}
-                        width={60}
-                        tick={{ fontSize: 11 }}
-                        dx={-10}
-                        domain={['dataMin', 'dataMax']}
-                        padding={{ top: 20, bottom: 20 }}
-                      />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#1F2937', 
-                          border: 'none', 
-                          color: '#E5E7EB',
-                          fontSize: '12px',
-                          padding: '8px'
-                        }}
-                        formatter={(value: number) => [`$${value.toLocaleString()}`, 'Portfolio Value']}
-                        labelFormatter={(label: string) => new Date(label).toLocaleDateString('en-US', { 
-                          month: 'long',
-                          day: 'numeric',
-                          year: 'numeric'
-                        })}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="value" 
-                        stroke="url(#colorGradient)"
-                        strokeWidth={2}
-                        dot={false}
-                        activeDot={{ r: 6, fill: '#8B5CF6' }}
-                      />
-                      <defs>
-                        <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#8B5CF6" stopOpacity={1}/>
-                          <stop offset="95%" stopColor="#EC4899" stopOpacity={1}/>
-                        </linearGradient>
-                      </defs>
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <div className="mt-6 flex justify-between items-start">
-                  <div className="w-1/2">
-                    <h3 className="text-white font-semibold mb-2">Asset Distribution</h3>
-                    <div className="h-[300px] relative">
+                    <div className="h-[300px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={pieChartData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={80}
-                            outerRadius={120}
-                            paddingAngle={2}
-                            dataKey="value"
-                            nameKey="symbol"
-                            onClick={(_, index) => {
-                              const asset = pieChartData[index];
-                              if ('logo' in asset) {  // проверяем, что это полный объект актива
-                                setSelectedAsset(asset);
-                              }
-                            }}
-                            activeIndex={pieChartData.findIndex(a => a.symbol === currentSelectedAsset?.symbol)}
-                            activeShape={(props: any) => {
-                              const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
-                              return (
-                                <g>
-                                  <Sector
-                                    cx={cx}
-                                    cy={cy}
-                                    innerRadius={innerRadius}
-                                    outerRadius={outerRadius + 10}
-                                    startAngle={startAngle}
-                                    endAngle={endAngle}
-                                    fill={fill}
-                                  />
-                                </g>
-                              );
-                            }}
-                          >
-                            {pieChartData.map((entry, index) => (
-                              <Cell 
-                                key={`cell-${index}`} 
-                                fill={entry.color}
-                                stroke="transparent"
-                              />
-                            ))}
-                          </Pie>
+                        <LineChart data={chartData}>
+                          <CartesianGrid 
+                            strokeDasharray="3 3" 
+                            stroke="#1F2937" 
+                            horizontal={true} 
+                            vertical={false} 
+                          />
+                          <XAxis 
+                            dataKey="date" 
+                            stroke="#9CA3AF"
+                            tickFormatter={dateFormatter}
+                            tick={{ fontSize: 11 }}
+                            dy={10}
+                            interval="preserveStartEnd"
+                          />
+                          <YAxis 
+                            stroke="#9CA3AF"
+                            tickFormatter={formatYAxis}
+                            width={60}
+                            tick={{ fontSize: 11 }}
+                            dx={-10}
+                            domain={['dataMin', 'dataMax']}
+                            padding={{ top: 20, bottom: 20 }}
+                          />
                           <Tooltip 
                             contentStyle={{ 
-                              backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                              backgroundColor: '#1F2937', 
                               border: 'none', 
-                              borderRadius: '6px',
-                              padding: '6px 10px', 
-                              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                              zIndex: 50,
-                              fontSize: '0.51rem' 
+                              color: '#E5E7EB',
+                              fontSize: '12px',
+                              padding: '8px'
                             }}
-                            formatter={(value: number, name: string, entry: any) => [
-                              <div key="tooltip" className="flex flex-col gap-1 text-white" style={{ position: 'relative', zIndex: 50 }}>
-                                <div className="text-lg font-bold">${value.toLocaleString()}</div>
-                                <div className="flex items-center gap-1 text-xs">
-                                  <span style={{ color: entry.payload.color }}>{name}</span>
-                                  <span className="text-gray-300">{entry.payload.percentage.toFixed(2)}%</span>
-                                </div>
-                                {entry.payload.symbol !== 'OTHER' && (
-                                  <>
-                                    <div className="text-[0.6rem] text-gray-300">
-                                      Amount: {entry.payload.amount.toLocaleString()} {name}
-                                    </div>
-                                    <div className="flex justify-between text-[0.6rem]">
-                                      <span>24h: <span className={entry.payload.change24h >= 0 ? 'text-green-400' : 'text-red-400'}>{entry.payload.change24h.toFixed(2)}%</span></span>
-                                      <span>7d: <span className={entry.payload.change7d >= 0 ? 'text-green-400' : 'text-red-400'}>{entry.payload.change7d.toFixed(2)}%</span></span>
-                                    </div>
-                                  </>
-                                )}
-                              </div>,
-                              ''
-                            ]}
-                            wrapperStyle={{ zIndex: 50 }}
+                            formatter={(value: number) => [`$${value.toLocaleString()}`, 'Portfolio Value']}
+                            labelFormatter={(label: string) => new Date(label).toLocaleDateString('en-US', { 
+                              month: 'long',
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
                           />
-                        </PieChart>
+                          <Line 
+                            type="monotone" 
+                            dataKey="value" 
+                            stroke="url(#colorGradient)"
+                            strokeWidth={2}
+                            dot={false}
+                            activeDot={{ r: 6, fill: '#8B5CF6' }}
+                          />
+                          <defs>
+                            <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#8B5CF6" stopOpacity={1}/>
+                              <stop offset="95%" stopColor="#EC4899" stopOpacity={1}/>
+                            </linearGradient>
+                          </defs>
+                        </LineChart>
                       </ResponsiveContainer>
-                      {currentSelectedAsset && (
-                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center w-[90px] z-20"> 
-                          <div className="text-base font-bold text-white">${currentSelectedAsset.value.toLocaleString()}</div>
-                          <div className="text-xs font-medium text-white">{currentSelectedAsset.symbol}</div>
-                          <div className="text-xs text-gray-400">{currentSelectedAsset.percentage.toFixed(2)}%</div>
-                        </div>
-                      )}
                     </div>
-                  </div>
-                  <div className="w-1/2 pl-4">
-                    <h3 className="text-white font-semibold mb-4">Portfolio Distribution</h3>
-                    <div className="space-y-3">
-                      {pieChartData.map((asset) => (
-                        <div key={asset.symbol} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            {asset.symbol === 'OTHER' ? (
-                              <Avatar className="h-5 w-5">
-                                <AvatarFallback>OTH</AvatarFallback>
-                              </Avatar>
-                            ) : (
-                              <Avatar className="h-5 w-5">
-                                <AvatarImage src={'logo' in asset ? asset.logo : ''} alt={asset.name} />
-                                <AvatarFallback>{asset.symbol}</AvatarFallback>
-                              </Avatar>
-                            )}
-                            <span className="text-white text-sm">{asset.symbol}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-white text-sm">{asset.percentage.toFixed(2)}%</span>
-                            <div 
-                              className="w-2 h-2 rounded-full"
-                              style={{ backgroundColor: asset.color }}
-                            />
-                          </div>
+
+                    <div className="mt-6 flex justify-between items-start">
+                      <div className="w-1/2">
+                        <h3 className="text-white font-semibold mb-2">Asset Distribution</h3>
+                        <div className="h-[300px] relative">
+                          {isEmptyPortfolio ? (
+                            <div className="flex flex-col items-center justify-center h-[300px] text-gray-400">
+                              <div className="text-sm">No assets in portfolio</div>
+                            </div>
+                          ) : (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie
+                                  data={pieChartData}
+                                  cx="50%"
+                                  cy="50%"
+                                  innerRadius={80}
+                                  outerRadius={120}
+                                  paddingAngle={2}
+                                  dataKey="value"
+                                  nameKey="symbol"
+                                  onClick={(_, index) => {
+                                    const asset = pieChartData[index];
+                                    if ('logo' in asset) {  // проверяем, что это полнй объект актива
+                                      setSelectedAsset(asset);
+                                    }
+                                  }}
+                                  activeIndex={pieChartData.findIndex(a => a.symbol === currentSelectedAsset?.symbol)}
+                                  activeShape={(props: any) => {
+                                    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+                                    return (
+                                      <g>
+                                        <Sector
+                                          cx={cx}
+                                          cy={cy}
+                                          innerRadius={innerRadius}
+                                          outerRadius={outerRadius + 10}
+                                          startAngle={startAngle}
+                                          endAngle={endAngle}
+                                          fill={fill}
+                                        />
+                                      </g>
+                                    );
+                                  }}
+                                >
+                                  {pieChartData.map((entry, index) => (
+                                    <Cell 
+                                      key={`cell-${index}`} 
+                                      fill={entry.color}
+                                      stroke="transparent"
+                                    />
+                                  ))}
+                                </Pie>
+                                <Tooltip 
+                                  contentStyle={{ 
+                                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                                    border: 'none', 
+                                    borderRadius: '6px',
+                                    padding: '6px 10px', 
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                                    zIndex: 50,
+                                    fontSize: '0.51rem' 
+                                  }}
+                                  formatter={(value: number, name: string, entry: any) => [
+                                    <div key="tooltip" className="flex flex-col gap-1 text-white" style={{ position: 'relative', zIndex: 50 }}>
+                                      <div className="text-lg font-bold">${value.toLocaleString()}</div>
+                                      <div className="flex items-center gap-1 text-xs">
+                                        <span style={{ color: entry.payload.color }}>{name}</span>
+                                        <span className="text-gray-300">{entry.payload.percentage.toFixed(2)}%</span>
+                                      </div>
+                                      {entry.payload.symbol !== 'OTHER' && (
+                                        <>
+                                          <div className="text-[0.6rem] text-gray-300">
+                                            Amount: {entry.payload.amount.toLocaleString()} {name}
+                                          </div>
+                                          <div className="flex justify-between text-[0.6rem]">
+                                            <span>24h: <span className={entry.payload.change24h >= 0 ? 'text-green-400' : 'text-red-400'}>{entry.payload.change24h.toFixed(2)}%</span></span>
+                                            <span>7d: <span className={entry.payload.change7d >= 0 ? 'text-green-400' : 'text-red-400'}>{entry.payload.change7d.toFixed(2)}%</span></span>
+                                          </div>
+                                        </>
+                                      )}
+                                    </div>,
+                                    ''
+                                  ]}
+                                  wrapperStyle={{ zIndex: 50 }}
+                                />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          )}
+                          {currentSelectedAsset && (
+                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center w-[90px] z-20"> 
+                              <div className="text-base font-bold text-white">${currentSelectedAsset.value.toLocaleString()}</div>
+                              <div className="text-xs font-medium text-white">{currentSelectedAsset.symbol}</div>
+                              <div className="text-xs text-gray-400">{currentSelectedAsset.percentage.toFixed(2)}%</div>
+                            </div>
+                          )}
                         </div>
-                      ))}
+                      </div>
+                      <div className="w-1/2 pl-4">
+                        <h3 className="text-white font-semibold mb-4">Portfolio Distribution</h3>
+                        {isEmptyPortfolio ? (
+                          <div className="flex flex-col items-center justify-center h-[300px] text-gray-400">
+                            <div className="text-sm">No assets in portfolio</div>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {pieChartData.map((asset) => (
+                              <div key={asset.symbol} className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  {asset.symbol === 'OTHER' ? (
+                                    <Avatar className="h-5 w-5">
+                                      <AvatarFallback>OTH</AvatarFallback>
+                                    </Avatar>
+                                  ) : (
+                                    <Avatar className="h-5 w-5">
+                                      <AvatarImage src={'logo' in asset ? asset.logo : ''} alt={asset.name} />
+                                      <AvatarFallback>{asset.symbol}</AvatarFallback>
+                                    </Avatar>
+                                  )}
+                                  <span className="text-white text-sm">{asset.symbol}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-white text-sm">{asset.percentage.toFixed(2)}%</span>
+                                  <div 
+                                    className="w-2 h-2 rounded-full"
+                                    style={{ backgroundColor: asset.color }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="mt-6">
@@ -664,64 +709,86 @@ export function MainContent() {
                         <span className="text-xs text-gray-400">High</span>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                <div className="mt-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <PortfolioSelector onPortfolioChange={handlePortfolioChange} />
-                  </div>
+                    <div className="mt-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-4">
+                          <PortfolioSelector onPortfolioChange={handlePortfolioChange} />
+                        </div>
+                        <Button 
+                          onClick={() => setIsAddTransactionOpen(true)} 
+                          className="bg-blue-500 hover:bg-blue-600 text-white"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Transaction
+                        </Button>
+                      </div>
 
-                  <div className="rounded-lg border border-gray-800/30 overflow-hidden">
-                    <div className="grid grid-cols-8 gap-4 p-2 text-sm text-[#D1D5DB] bg-[#0A1929]">
-                      <div className="col-span-2">Asset</div>
-                      <div className="text-right">Amount</div>
-                      <div className="text-right">24h</div>
-                      <div className="text-right">7d</div>
-                      <div className="text-right">Price</div>
-                      <div className="text-right">Value</div>
-                      <div className="text-right">P/L</div>
-                    </div>
-                    <div className="flex flex-col">
-                      <AnimatePresence>
-                      {assets.map((asset, index) => (
-                          <motion.div 
-                            key={asset.symbol}
-                            className={`grid grid-cols-8 gap-2 p-2 hover:bg-[#0A1929] cursor-pointer ${
-                              index % 2 === 0 ? 'bg-[#010714]' : 'bg-[#010714]/50'
-                            }`}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.2 }}
+                      {isEmptyPortfolio ? (
+                        <div className="flex flex-col items-center justify-center h-[200px] text-gray-400">
+                          <div className="text-sm">No transactions yet</div>
+                          <Button 
+                            onClick={() => setIsAddTransactionOpen(true)}
+                            className="mt-4 bg-blue-500 hover:bg-blue-600"
                           >
-                            <div className="col-span-2 flex items-center">
-                              <Avatar className="h-6 w-6 mr-2">
-                                <AvatarImage src={asset.logo} alt={asset.name} />
-                                <AvatarFallback>{asset.symbol}</AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="font-medium text-white text-sm">{asset.name}</div>
-                                <div className="text-xs text-[#9CA3AF]">{asset.symbol}</div>
-                              </div>
-                            </div>
-                            <div className="text-right text-white text-sm">{asset.amount.toLocaleString()}</div>
-                            <div className={`text-right text-sm ${asset.change24h >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}`}>
-                              {asset.change24h.toFixed(2)}%
-                            </div>
-                            <div className={`text-right text-sm ${asset.change7d >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}`}>
-                              {asset.change7d.toFixed(2)}%
-                            </div>
-                            <div className="text-right text-white text-sm">${asset.price.toFixed(2)}</div>
-                            <div className="text-right text-white text-sm">${asset.value.toLocaleString()}</div>
-                            <div className={`text-right text-sm ${asset.profit >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}`}>
-                              ${Math.abs(asset.profit).toLocaleString()}
-                            </div>
-                          </motion.div>
-                        ))}
-                      </AnimatePresence>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add First Transaction
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="rounded-lg border border-gray-800/30 overflow-hidden">
+                          <div className="grid grid-cols-8 gap-4 p-2 text-sm text-[#D1D5DB] bg-[#0A1929]">
+                            <div className="col-span-2">Asset</div>
+                            <div className="text-right">Amount</div>
+                            <div className="text-right">24h</div>
+                            <div className="text-right">7d</div>
+                            <div className="text-right">Price</div>
+                            <div className="text-right">Value</div>
+                            <div className="text-right">P/L</div>
+                          </div>
+                          <div className="flex flex-col">
+                            <AnimatePresence>
+                            {assets.map((asset, index) => (
+                                <motion.div 
+                                  key={asset.symbol}
+                                  className={`grid grid-cols-8 gap-2 p-2 hover:bg-[#0A1929] cursor-pointer ${
+                                    index % 2 === 0 ? 'bg-[#010714]' : 'bg-[#010714]/50'
+                                  }`}
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  transition={{ duration: 0.2 }}
+                                >
+                                  <div className="col-span-2 flex items-center">
+                                    <Avatar className="h-6 w-6 mr-2">
+                                      <AvatarImage src={asset.logo} alt={asset.name} />
+                                      <AvatarFallback>{asset.symbol}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <div className="font-medium text-white text-sm">{asset.name}</div>
+                                      <div className="text-xs text-[#9CA3AF]">{asset.symbol}</div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right text-white text-sm">{asset.amount.toLocaleString()}</div>
+                                  <div className={`text-right text-sm ${asset.change24h >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}`}>
+                                    {asset.change24h.toFixed(2)}%
+                                  </div>
+                                  <div className={`text-right text-sm ${asset.change7d >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}`}>
+                                    {asset.change7d.toFixed(2)}%
+                                  </div>
+                                  <div className="text-right text-white text-sm">${asset.price.toFixed(2)}</div>
+                                  <div className="text-right text-white text-sm">${asset.value.toLocaleString()}</div>
+                                  <div className={`text-right text-sm ${asset.profit >= 0 ? 'text-[#4ADE80]' : 'text-[#FF4D4D]'}`}>
+                                    ${Math.abs(asset.profit).toLocaleString()}
+                                  </div>
+                                </motion.div>
+                              ))}
+                            </AnimatePresence>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
