@@ -12,6 +12,7 @@ import { Portfolio } from '@/utils/supabase'
 import { getUserPortfolios, updatePortfolioName, createPortfolio, deletePortfolio } from '@/utils/actions/portfolio-actions'
 import { useUser } from '@clerk/nextjs'
 import { FakePortfolio } from '@/app/data/fakePortfolio'
+import { toast } from 'sonner'
 
 interface PortfolioSelectorProps {
   onPortfolioChange: (portfolio: Portfolio) => void
@@ -72,6 +73,10 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
   }
 
   const handleCreatePortfolio = async () => {
+    if (newPortfolioName.length > 16) {
+      toast.error("Portfolio name cannot exceed 16 characters");
+      return;
+    }
     if (!user?.id || !newPortfolioName) return
     try {
       const newPortfolio = await createPortfolio(user.id, newPortfolioName, portfolioType)
@@ -119,7 +124,7 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
           }
         }}
       >
-        <SelectTrigger className="w-[140px] h-8 bg-[#1F2937] border-gray-800/50 text-sm">
+        <SelectTrigger className="w-[160px] h-8 bg-[#1F2937] border-gray-800/50 text-sm whitespace-nowrap overflow-hidden text-ellipsis">
           <SelectValue placeholder="Select Portfolio" />
         </SelectTrigger>
         <SelectContent>
@@ -225,6 +230,8 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
                 value={newPortfolioName}
                 onChange={(e) => setNewPortfolioName(e.target.value)}
                 placeholder="Enter portfolio name"
+                maxLength={16}
+                className="bg-transparent border-gray-800 text-white"
               />
             </div>
             <div>
