@@ -20,10 +20,16 @@ export default function CryptoDashboard() {
             <UserProfile />
           </div>
         </div>
-        <div className="grid grid-cols-12 gap-4 pt-20">
-          <LeftSidebar />
-          <MainContent />
-          <RightSidebar />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-20 max-w-[1920px] mx-auto">
+          <div className="lg:col-span-3">
+            <LeftSidebar />
+          </div>
+          <div className="lg:col-span-6">
+            <MainContent />
+          </div>
+          <div className="lg:col-span-3">
+            <RightSidebar />
+          </div>
         </div>
       </div>
       <style jsx global>{`

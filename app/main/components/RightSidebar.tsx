@@ -6,6 +6,17 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
+interface Signal {
+  name: string;
+  winRate: number;
+  status: string;
+  signalsPerDay: number;
+  trend: string;
+  timeline: string;
+  probability: number;
+  direction: string;
+}
+
 const alphaSignals = [
   { 
     name: 'Volatility Breakout Alpha', 
@@ -61,7 +72,7 @@ const alphaSignals = [
 
 export function RightSidebar() {
   const [alphaInfoOpen, setAlphaInfoOpen] = useState(false)
-  const [selectedAlpha, setSelectedAlpha] = useState(null)
+  const [selectedSignal, setSelectedSignal] = useState<Signal | null>(null)
 
   return (
     <aside className="col-span-12 lg:col-span-3 border border-gray-700 rounded-lg overflow-hidden sticky top-20 self-start">
@@ -100,7 +111,7 @@ export function RightSidebar() {
                               size="icon"
                               className="h-6 w-6 hover:bg-[#1F2937]"
                               onClick={() => {
-                                setSelectedAlpha(signal)
+                                setSelectedSignal(signal)
                                 setAlphaInfoOpen(true)
                               }}
                             >
