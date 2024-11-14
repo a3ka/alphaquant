@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./Select"
-import { Check, ChevronsUpDown, Calendar as CalendarIcon, TrendingUp, TrendingDown, Plus } from "lucide-react"
+import { Check, ChevronsUpDown, Calendar as CalendarIcon, Clock, TrendingUp, TrendingDown, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -166,9 +166,10 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                 onClick={() => handleTransactionTypeChange(type)}
                 className={cn(
                   "flex-1 text-white border-2 text-xs sm:text-sm py-1 px-2",
-                  transactionType === type
-                    ? `bg-${color}-600 border-${color}-400 hover:bg-${color}-700`
-                    : `bg-transparent border-gray-600 hover:bg-${color}-900 hover:border-${color}-400`
+                  type === 'buy' && transactionType === type ? "bg-green-600 border-green-400 hover:bg-green-700" :
+                  type === 'sell' && transactionType === type ? "bg-red-600 border-red-400 hover:bg-red-700" :
+                  type === 'transfer' && transactionType === type ? "bg-blue-600 border-blue-400 hover:bg-blue-700" :
+                  `bg-transparent border-gray-600 hover:bg-${color}-900 hover:border-${color}-400`
                 )}
               >
                 {label}
@@ -441,43 +442,128 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
             </>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="date" className="text-sm font-medium text-gray-300">Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal text-sm",
-                      !date && "text-muted-foreground",
-                      "bg-[#1F2937] border-gray-600 text-white hover:bg-[#2C3E50] hover:text-white"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "dd-MM-yyyy") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-[#1F2937] border-gray-600">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                    initialFocus
-                    className="bg-[#1F2937] text-white"
-                  />
-                </PopoverContent>
-              </Popover>
+              <div className="relative">
+                <Input
+                  type="text"
+                  id="date"
+                  value={date ? format(date, "dd-MM-yyyy") : ''}
+                  onChange={(e) => {
+                    const dateValue = e.target.value;
+                    const parsedDate = new Date(dateValue);
+                    if (!isNaN(parsedDate.getTime())) {
+                      setDate(parsedDate);
+                    }
+                  }}
+                  className="bg-[#1F2937] border-gray-600 text-white pr-10"
+                  placeholder="DD-MM-YYYY"
+                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <div
+                      aria-label="Pick date"
+                      role="button"
+                      tabIndex={0}
+                      className="absolute right-0 top-0 h-full px-3 inline-flex items-center justify-center hover:bg-gray-700/50 rounded-r-md cursor-pointer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <CalendarIcon className="h-4 w-4 text-gray-400" />
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="bg-[#1F2937] border-gray-600 p-0">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={setDate}
+                      className="bg-[#1F2937] text-white rounded-md"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="time" className="text-sm font-medium text-gray-300">Time</Label>
-              <Input 
-                id="time" 
-                type="time" 
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                className="bg-[#1F2937] border-gray-600 text-white text-sm [color-scheme:dark]"
-              />
+              <div className="relative">
+                <Input
+                  type="text"
+                  id="time"
+                  value={time}
+                  onChange={(e) => {
+                    const timeValue = e.target.value;
+                    // Разрешаем ввод только цифр и двоеточия
+                    if (/^[0-9:]*$/.test(timeValue)) {
+                      const [hours, minutes] = timeValue.split(':');
+                      // Проверяем формат времени HH:MM
+                      const timeRegex = /^([0-1]?[0-9]|2[0-3]):?([0-5]?[0-9])?$/;
+                      if (timeRegex.test(timeValue)) {
+                        setTime(timeValue);
+                      }
+                    }
+                  }}
+                  onBlur={() => {
+                    // Форматируем время при потере фокуса
+                    const [hours, minutes] = time.split(':');
+                    if (hours || minutes) {
+                      const formattedHours = hours ? hours.padStart(2, '0') : '00';
+                      const formattedMinutes = minutes ? minutes.padStart(2, '0') : '00';
+                      setTime(`${formattedHours}:${formattedMinutes}`);
+                    }
+                  }}
+                  className="bg-[#1F2937] border-gray-600 text-white pr-10"
+                  placeholder="HH:MM"
+                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent focus:ring-0"
+                    >
+                      <Clock className="h-4 w-4 text-gray-400" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-48 p-2 bg-[#1F2937] border-gray-600">
+                    <div className="grid gap-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-2">
+                          <Label className="text-xs">Hours</Label>
+                          <Input
+                            type="text"
+                            value={time.split(':')[0]}
+                            onChange={(e) => {
+                              const hours = e.target.value;
+                              if (/^\d*$/.test(hours) && (Number(hours) >= 0 && Number(hours) <= 23)) {
+                                const minutes = time.split(':')[1] || '00';
+                                setTime(`${hours}:${minutes}`);
+                              }
+                            }}
+                            className="bg-[#1F2937] border-gray-600 text-white h-8"
+                            maxLength={2}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs">Minutes</Label>
+                          <Input
+                            type="text"
+                            value={time.split(':')[1]}
+                            onChange={(e) => {
+                              const minutes = e.target.value;
+                              if (/^\d*$/.test(minutes) && (Number(minutes) >= 0 && Number(minutes) <= 59)) {
+                                const hours = time.split(':')[0] || '00';
+                                setTime(`${hours}:${minutes}`);
+                              }
+                            }}
+                            className="bg-[#1F2937] border-gray-600 text-white h-8"
+                            maxLength={2}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
           </div>
         </div>
