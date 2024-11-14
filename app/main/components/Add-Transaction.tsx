@@ -12,12 +12,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox"
 import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
-
-const portfolios = [
-  { id: 'portfolio1', name: 'Portfolio 1', type: 'Spot', balance: 10000, assets: 10000, debt: 0 },
-  { id: 'portfolio2', name: 'Portfolio 2', type: 'Margin', balance: 5000, assets: 15000, debt: 10000 },
-  { id: 'portfolio3', name: 'Portfolio 3', type: 'Spot', balance: 15000, assets: 15000, debt: 0 },
-]
+import { getUserPortfolios } from '@/utils/actions/portfolio-actions'
+import { useUser } from '@clerk/nextjs'
+import { Portfolio } from '@/utils/supabase'
+import { FakePortfolio } from '@/app/data/fakePortfolio'
 
 const coins = [
   { label: "Bitcoin", value: "BTC", icon: "https://assets.coingecko.com/coins/images/1/standard/bitcoin.png?1696501400", amount: 1.5 },
@@ -49,10 +47,29 @@ interface AddTransactionDialogProps {
 }
 
 export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialogProps) {
+  const { user } = useUser()
+  const [portfolios, setPortfolios] = useState<Portfolio[]>([FakePortfolio])
+  
+  useEffect(() => {
+    const loadPortfolios = async () => {
+      if (!user?.id) return
+      try {
+        const data = await getUserPortfolios(user.id)
+        if (Array.isArray(data)) {
+          setPortfolios([FakePortfolio, ...data])
+        }
+      } catch (error) {
+        console.error('Failed to load portfolios:', error)
+      }
+    }
+    
+    loadPortfolios()
+  }, [user?.id])
+
   const [transactionType, setTransactionType] = useState('buy')
-  const [portfolio, setPortfolio] = useState(portfolios[0].id)
-  const [sourcePortfolio, setSourcePortfolio] = useState(portfolios[0].id)
-  const [targetPortfolio, setTargetPortfolio] = useState(portfolios[1].id)
+  const [portfolio, setPortfolio] = useState('')
+  const [sourcePortfolio, setSourcePortfolio] = useState('')
+  const [targetPortfolio, setTargetPortfolio] = useState('')
   const [selectedCoin, setSelectedCoin] = useState("")
   const [paymentMethod, setPaymentMethod] = useState("")
   const [amount, setAmount] = useState('')
@@ -67,6 +84,18 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
   const [dateInput, setDateInput] = useState('')
   const [hours, setHours] = useState('');
   const [minutes, setMinutes] = useState('');
+
+  useEffect(() => {
+    if (portfolios.length > 0) {
+      setPortfolio(portfolios[0].id)
+      setSourcePortfolio(portfolios[0].id)
+      if (portfolios.length > 1) {
+        setTargetPortfolio(portfolios[1].id)
+      } else {
+        setTargetPortfolio(portfolios[0].id)
+      }
+    }
+  }, [portfolios])
 
   const handleTransactionTypeChange = (type: string) => {
     setTransactionType(type)
@@ -121,28 +150,32 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
     { type: 'transfer', label: 'Transfer', color: 'blue' }
   ]
 
-  const selectedPortfolio = portfolios.find(p => p.id === portfolio) ?? portfolios[0]
-  const totalAmount = Number(amount)
-  const totalValue = totalAmount * Number(price)
-  const isMarginPortfolio = selectedPortfolio?.type === 'Margin'
+  const selectedPortfolio = portfolios?.find(p => p.id === portfolio)
+  const isMarginPortfolio = selectedPortfolio?.type === 'margin'
+  const totalValue = Number(amount) * Number(price)
+
+  // Получаем значения из правильных мест в объекте
+  const currentAssets = selectedPortfolio?.data?.totalValue || 0
+  const currentDebt = selectedPortfolio?.margin_data?.debt || 0
+
   let newAssets, newDebt, currentRatio, newRatio
 
   if (isMarginPortfolio) {
     if (transactionType === 'buy') {
-      newAssets = selectedPortfolio.assets + totalValue
-      newDebt = selectedPortfolio.debt + totalValue
+      newAssets = currentAssets + totalValue
+      newDebt = currentDebt + totalValue
     } else if (transactionType === 'sell') {
-      newAssets = selectedPortfolio.assets + totalValue
-      newDebt = selectedPortfolio.debt + totalValue
+      newAssets = currentAssets - totalValue
+      newDebt = currentDebt - totalValue
     } else {
-      newAssets = selectedPortfolio.assets
-      newDebt = selectedPortfolio.debt
+      newAssets = currentAssets
+      newDebt = currentDebt
     }
-    currentRatio = selectedPortfolio.assets / selectedPortfolio.debt
-    newRatio = newAssets / newDebt
+    currentRatio = currentAssets / (currentDebt || 1)
+    newRatio = newAssets / (newDebt || 1)
   } else {
-    newAssets = transactionType === 'buy' ? selectedPortfolio.assets + totalValue : selectedPortfolio.assets - totalValue
-    newDebt = selectedPortfolio.debt
+    newAssets = transactionType === 'buy' ? currentAssets + totalValue : currentAssets - totalValue
+    newDebt = currentDebt
     currentRatio = 0
     newRatio = 0
   }
@@ -369,14 +402,20 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                     <SelectValue placeholder="Select portfolio" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#1F2937] border-gray-600">
-                    {portfolios.map((p) => (
+                    {portfolios?.map((p) => (
                       <SelectItem 
                         key={p.id} 
                         value={p.id}
                         className="text-gray-200 hover:bg-gray-700 focus:bg-gray-700 focus:text-white"
                       >
-                        <span className="text-sm font-medium text-white">{p.name}</span>
-                        <span className="ml-2 text-xs text-gray-400">({p.type})</span>
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "w-2 h-2 rounded-full",
+                            p.type === 'spot' ? "bg-green-500" : "bg-yellow-500"
+                          )} />
+                          <span className="text-sm font-medium text-white">{p.name}</span>
+                          <span className="ml-2 text-xs text-gray-400">({p.type})</span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -389,12 +428,12 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                   <div className="grid grid-cols-2 gap-3 text-xs">
                     <div>
                       <p className="font-medium text-gray-300">Assets:</p>
-                      <p className="font-bold text-white">${selectedPortfolio.assets.toFixed(2)}</p>
+                      <p className="font-bold text-white">${currentAssets.toFixed(2)}</p>
                       <p className="font-medium text-gray-300 mt-1">After transaction:</p>
                       <p className="font-bold text-green-500">${newAssets.toFixed(2)}</p>
                       {transactionType === 'buy' && (
                         <p className="text-gray-400 mt-1">
-                          +{totalAmount} {selectedCoin} (${totalValue.toFixed(2)})
+                          +{amount} {selectedCoin} (${totalValue.toFixed(2)})
                         </p>
                       )}
                       {transactionType === 'sell' && (
@@ -405,7 +444,7 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                     </div>
                     <div>
                       <p className="font-medium text-gray-300">Debt:</p>
-                      <p className="font-bold text-white">${selectedPortfolio.debt.toFixed(2)}</p>
+                      <p className="font-bold text-white">${currentDebt.toFixed(2)}</p>
                       <p className="font-medium text-gray-300 mt-1">After transaction:</p>
                       <p className="font-bold text-red-500">${newDebt.toFixed(2)}</p>
                       {transactionType === 'buy' && (
@@ -415,7 +454,7 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                       )}
                       {transactionType === 'sell' && (
                         <p className="text-gray-400 mt-1">
-                          +{totalAmount} {selectedCoin}
+                          +{amount} {selectedCoin}
                         </p>
                       )}
                     </div>
@@ -606,30 +645,46 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                     // Разрешаем полное удаление
                     if (value === '') {
                       setTime('');
+                      setHours('');
+                      setMinutes('');
                       return;
                     }
 
-                    // Удаляем все нецифровые символы для нового ввода
-                    value = value.replace(/[^\d]/g, '');
+                    // Удаляем все нецифровые символы и двоеточие
+                    value = value.replace(/[^\d:]/g, '');
                     
-                    // Автоматическое добавление двоеточия
-                    if (value.length > 2) {
-                      const hours = value.slice(0, 2);
-                      const minutes = value.slice(2);
-                      if (parseInt(hours) <= 23) {
-                        value = `${hours}:${minutes}`;
+                    // Если есть двоеточие, обрабатываем часы и минуты отдельно
+                    if (value.includes(':')) {
+                      const [hoursStr, minutesStr] = value.split(':');
+                      const validHours = hoursStr && parseInt(hoursStr) <= 23;
+                      const validMinutes = minutesStr && parseInt(minutesStr) <= 59;
+                      if (validHours && validMinutes) {
+                        value = `${hoursStr}:${minutesStr}`;
+                        setTime(value);
+                        setHours(hoursStr);
+                        setMinutes(minutesStr);
                       }
-                    }
-                    
-                    // Проверяем валидность времени
-                    const timeRegex = /^([0-1]?[0-9]|2[0-3]):?([0-5]?[0-9])?$/;
-                    if (timeRegex.test(value)) {
-                      setTime(value);
+                    } else {
+                      // Если нет двоеточия, добавляем его после первых двух цифр
+                      if (value.length > 2) {
+                        const hours = value.slice(0, 2);
+                        const minutes = value.slice(2);
+                        if (parseInt(hours) <= 23) {
+                          value = `${hours}:${minutes}`;
+                          setTime(value);
+                          setHours(hours);
+                          setMinutes(minutes);
+                        }
+                      } else {
+                        setTime(value);
+                        setHours(value);
+                        setMinutes('');
+                      }
                     }
                   }}
                   className={cn(
                     "bg-[#1F2937] border-gray-600 text-white pr-10",
-                    time && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time) && "border-red-500"
+                    ((dateInput && !date) || (date && time && !isDateTimeValid(date, time))) && "border-red-500"
                   )}
                   placeholder="HH:MM"
                   maxLength={5}
@@ -655,6 +710,11 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                             value={hours}
                             onChange={(e) => {
                               const value = e.target.value.replace(/[^\d]/g, '');
+                              if (value === '') {
+                                setHours('');
+                                setTime('');
+                                return;
+                              }
                               if (parseInt(value) >= 0 && parseInt(value) <= 23) {
                                 setHours(value);
                                 setTime(`${value.padStart(2, '0')}:${minutes || '00'}`);

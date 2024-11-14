@@ -32,6 +32,7 @@ export type Tables = {
       margin_data?: {
         sourcePortfolioId?: string
         assets?: Array<{symbol: string, amount: number}>
+        debt?: number
       }
       data: {
         assets: Array<{
