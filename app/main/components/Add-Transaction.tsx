@@ -196,8 +196,38 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
     return selectedDateTime <= currentDateTime;
   };
 
+  // Функция сброса всех полей
+  const resetForm = () => {
+    setTransactionType('buy');
+    setPortfolio(portfolios[0].id);
+    setSourcePortfolio(portfolios[0].id);
+    setTargetPortfolio(portfolios[1].id);
+    setSelectedCoin("");
+    setPaymentMethod("");
+    setAmount('');
+    setPrice('');
+    setSelectedAssets([]);
+    setDate(new Date());
+    setDateInput(format(new Date(), "dd-MM-yyyy"));
+    setTime('12:00');
+    setHours('12');
+    setMinutes('00');
+    setAssetToDebtRatio({ current: 2.5, after: 2.5 });
+    setShowAddFunds(false);
+    setAdditionalFunds('');
+    setInsufficientFunds(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          resetForm();
+        }
+        onOpenChange(isOpen);
+      }}
+    >
       <DialogContent className="sm:max-w-[425px] md:max-w-[450px] lg:max-w-[500px] bg-[#0A1929] text-white overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="text-lg sm:text-xl font-bold text-white">Add Transaction</DialogTitle>
@@ -594,15 +624,12 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                     // Проверяем валидность времени
                     const timeRegex = /^([0-1]?[0-9]|2[0-3]):?([0-5]?[0-9])?$/;
                     if (timeRegex.test(value)) {
-                      if (date && isDateTimeValid(date, value)) {
-                        setTime(value);
-                      }
+                      setTime(value);
                     }
                   }}
                   className={cn(
                     "bg-[#1F2937] border-gray-600 text-white pr-10",
-                    (time && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time)) || 
-                    (date && !isDateTimeValid(date, time)) && "border-red-500"
+                    time && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time) && "border-red-500"
                   )}
                   placeholder="HH:MM"
                   maxLength={5}
@@ -628,11 +655,6 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                             value={hours}
                             onChange={(e) => {
                               const value = e.target.value.replace(/[^\d]/g, '');
-                              if (value === '') {
-                                setHours('');
-                                setTime('');
-                                return;
-                              }
                               if (parseInt(value) >= 0 && parseInt(value) <= 23) {
                                 setHours(value);
                                 setTime(`${value.padStart(2, '0')}:${minutes || '00'}`);
@@ -650,11 +672,6 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                             value={minutes}
                             onChange={(e) => {
                               const value = e.target.value.replace(/[^\d]/g, '');
-                              if (value === '') {
-                                setMinutes('');
-                                setTime(`${hours || '00'}:00`);
-                                return;
-                              }
                               if (parseInt(value) >= 0 && parseInt(value) <= 59) {
                                 setMinutes(value);
                                 setTime(`${hours || '00'}:${value.padStart(2, '0')}`);
