@@ -85,10 +85,9 @@ enum PortfolioType {
 enum TransactionType {
   BUY
   SELL
-  TRANSFER_TO_MARGIN
-  TRANSFER_FROM_MARGIN
   MARGIN_BUY
   MARGIN_SELL
+  TRANSFER
 }
 
 model user_portfolio {
@@ -109,22 +108,33 @@ model user_portfolio {
 }
 
 model crypto_transaction {
-  id              Int             @id @default(autoincrement())
-  created_time    DateTime        @default(now())
+  id               Int             @id @default(autoincrement())
+  created_time     DateTime        @default(now())
   transaction_time DateTime
-  portfolio_id    Int             
-  user_id         String
-  coin_name       String
-  coin_ticker     String
-  amount          Float           // Основная сумма операции
-  borrowed        Float?          // Сумма, взятая в долг
-  price_usd       Float
-  total_usd       Float
-  type            TransactionType
-  notes           String?
+  portfolio_id     Int             
+  user_id          String
+  type             TransactionType
+  
+  // Базовые поля для всех типов транзакций
+  coin_name        String
+  coin_ticker      String
+  amount           Float           // Количество монет в транзакции
+  notes            String?
 
-  portfolio       user_portfolio  @relation(fields: [portfolio_id], references: [id])
-  user            user           @relation(fields: [user_id], references: [user_id])
+  // Поля для BUY/SELL
+  payment_method   String?         // USDT, USDC, BTC и т.д.
+  payment_price    Float?          // Цена в валюте оплаты
+  payment_total    Float?          // Общая сумма в валюте оплаты
+  price_usd        Float?          // Цена в USD на момент транзакции
+  total_usd        Float?          // Общая сумма в USD
+  borrowed_amount  Float?          // Количество заемных монет (для шорта или маржинальной торговли)
+  
+  // Поля для TRANSFER
+  target_portfolio_id Int?         // Только для TRANSFER
+
+  // Связи
+  portfolio       user_portfolio   @relation(fields: [portfolio_id], references: [id])
+  user            user            @relation(fields: [user_id], references: [user_id])
 
   @@index([portfolio_id, coin_ticker])
   @@index([user_id])
