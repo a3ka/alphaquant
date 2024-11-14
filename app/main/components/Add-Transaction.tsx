@@ -64,6 +64,9 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
   const [showAddFunds, setShowAddFunds] = useState(false)
   const [additionalFunds, setAdditionalFunds] = useState('')
   const [insufficientFunds, setInsufficientFunds] = useState(false)
+  const [dateInput, setDateInput] = useState('')
+  const [hours, setHours] = useState('');
+  const [minutes, setMinutes] = useState('');
 
   const handleTransactionTypeChange = (type: string) => {
     setTransactionType(type)
@@ -150,6 +153,48 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
       setAssetToDebtRatio({ current: 2.5, after: newRatio })
     }
   }, [sourcePortfolio, transactionType, selectedAssets])
+
+  const isValidDate = (value: string): boolean => {
+    if (!value) return true;
+    const parts = value.split('-');
+    if (parts.length < 3) return true;
+    
+    const day = parseInt(parts[0]);
+    const month = parseInt(parts[1]);
+    const year = parseInt(parts[2]);
+
+    return (
+      day > 0 && day <= 31 &&
+      month > 0 && month <= 12 &&
+      year >= 1900 && year <= 2100
+    );
+  };
+
+  const isValidTime = (value: string): boolean => {
+    if (!value) return true;
+    const parts = value.split(':');
+    if (parts.length < 2) return true;
+
+    const hours = parseInt(parts[0]);
+    const minutes = parseInt(parts[1]);
+
+    return (
+      hours >= 0 && hours <= 23 &&
+      minutes >= 0 && minutes <= 59
+    );
+  };
+
+  const isDateTimeValid = (inputDate: Date | undefined, inputTime: string): boolean => {
+    if (!inputDate) return false;
+    
+    const [hours, minutes] = inputTime.split(':').map(Number);
+    const selectedDateTime = new Date(inputDate);
+    selectedDateTime.setHours(hours, minutes);
+    
+    const currentDateTime = new Date();
+    
+    return selectedDateTime <= currentDateTime;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -449,16 +494,46 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                 <Input
                   type="text"
                   id="date"
-                  value={date ? format(date, "dd-MM-yyyy") : ''}
+                  value={dateInput}
                   onChange={(e) => {
-                    const dateValue = e.target.value;
-                    const parsedDate = new Date(dateValue);
-                    if (!isNaN(parsedDate.getTime())) {
-                      setDate(parsedDate);
+                    let value = e.target.value.replace(/[^\d]/g, '');
+                    
+                    // Автоматическое добавление дефисов
+                    if (value.length > 4) {
+                      value = value.slice(0, 4) + '-' + value.slice(4);
+                    }
+                    if (value.length > 2) {
+                      value = value.slice(0, 2) + '-' + value.slice(2);
+                    }
+                    
+                    setDateInput(value);
+                    
+                    // Валидация полной даты
+                    if (value.length >= 8) {
+                      const day = parseInt(value.slice(0, 2));
+                      const month = parseInt(value.slice(3, 5));
+                      const year = parseInt(value.slice(6));
+                      
+                      if (day > 0 && day <= 31 && month > 0 && month <= 12 && year >= 1900 && year <= 2100) {
+                        const newDate = new Date(year, month - 1, day);
+                        if (isDateTimeValid(newDate, time)) {
+                          setDate(newDate);
+                        } else {
+                          setDate(undefined);
+                        }
+                      } else {
+                        setDate(undefined);
+                      }
+                    } else {
+                      setDate(undefined);
                     }
                   }}
-                  className="bg-[#1F2937] border-gray-600 text-white pr-10"
+                  className={cn(
+                    "bg-[#1F2937] border-gray-600 text-white pr-10",
+                    (dateInput && !date) || (date && !isDateTimeValid(date, time)) && "border-red-500"
+                  )}
                   placeholder="DD-MM-YYYY"
+                  maxLength={10}
                 />
                 <Popover>
                   <PopoverTrigger asChild>
@@ -476,7 +551,12 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                     <Calendar
                       mode="single"
                       selected={date}
-                      onSelect={setDate}
+                      onSelect={(newDate) => {
+                        if (newDate) {
+                          setDate(newDate);
+                          setDateInput(format(newDate, "dd-MM-yyyy"));
+                        }
+                      }}
                       className="bg-[#1F2937] text-white rounded-md"
                     />
                   </PopoverContent>
@@ -491,28 +571,41 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                   id="time"
                   value={time}
                   onChange={(e) => {
-                    const timeValue = e.target.value;
-                    // Разрешаем ввод только цифр и двоеточия
-                    if (/^[0-9:]*$/.test(timeValue)) {
-                      const [hours, minutes] = timeValue.split(':');
-                      // Проверяем формат времени HH:MM
-                      const timeRegex = /^([0-1]?[0-9]|2[0-3]):?([0-5]?[0-9])?$/;
-                      if (timeRegex.test(timeValue)) {
-                        setTime(timeValue);
+                    let value = e.target.value;
+                    
+                    // Разрешаем полное удаление
+                    if (value === '') {
+                      setTime('');
+                      return;
+                    }
+
+                    // Удаляем все нецифровые символы для нового ввода
+                    value = value.replace(/[^\d]/g, '');
+                    
+                    // Автоматическое добавление двоеточия
+                    if (value.length > 2) {
+                      const hours = value.slice(0, 2);
+                      const minutes = value.slice(2);
+                      if (parseInt(hours) <= 23) {
+                        value = `${hours}:${minutes}`;
+                      }
+                    }
+                    
+                    // Проверяем валидность времени
+                    const timeRegex = /^([0-1]?[0-9]|2[0-3]):?([0-5]?[0-9])?$/;
+                    if (timeRegex.test(value)) {
+                      if (date && isDateTimeValid(date, value)) {
+                        setTime(value);
                       }
                     }
                   }}
-                  onBlur={() => {
-                    // Форматируем время при потере фокуса
-                    const [hours, minutes] = time.split(':');
-                    if (hours || minutes) {
-                      const formattedHours = hours ? hours.padStart(2, '0') : '00';
-                      const formattedMinutes = minutes ? minutes.padStart(2, '0') : '00';
-                      setTime(`${formattedHours}:${formattedMinutes}`);
-                    }
-                  }}
-                  className="bg-[#1F2937] border-gray-600 text-white pr-10"
+                  className={cn(
+                    "bg-[#1F2937] border-gray-600 text-white pr-10",
+                    (time && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time)) || 
+                    (date && !isDateTimeValid(date, time)) && "border-red-500"
+                  )}
                   placeholder="HH:MM"
+                  maxLength={5}
                 />
                 <Popover>
                   <PopoverTrigger asChild>
@@ -531,12 +624,18 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                           <Label className="text-xs">Hours</Label>
                           <Input
                             type="text"
-                            value={time.split(':')[0]}
+                            placeholder="HH"
+                            value={hours}
                             onChange={(e) => {
-                              const hours = e.target.value;
-                              if (/^\d*$/.test(hours) && (Number(hours) >= 0 && Number(hours) <= 23)) {
-                                const minutes = time.split(':')[1] || '00';
-                                setTime(`${hours}:${minutes}`);
+                              const value = e.target.value.replace(/[^\d]/g, '');
+                              if (value === '') {
+                                setHours('');
+                                setTime('');
+                                return;
+                              }
+                              if (parseInt(value) >= 0 && parseInt(value) <= 23) {
+                                setHours(value);
+                                setTime(`${value.padStart(2, '0')}:${minutes || '00'}`);
                               }
                             }}
                             className="bg-[#1F2937] border-gray-600 text-white h-8"
@@ -547,12 +646,18 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                           <Label className="text-xs">Minutes</Label>
                           <Input
                             type="text"
-                            value={time.split(':')[1]}
+                            placeholder="MM"
+                            value={minutes}
                             onChange={(e) => {
-                              const minutes = e.target.value;
-                              if (/^\d*$/.test(minutes) && (Number(minutes) >= 0 && Number(minutes) <= 59)) {
-                                const hours = time.split(':')[0] || '00';
-                                setTime(`${hours}:${minutes}`);
+                              const value = e.target.value.replace(/[^\d]/g, '');
+                              if (value === '') {
+                                setMinutes('');
+                                setTime(`${hours || '00'}:00`);
+                                return;
+                              }
+                              if (parseInt(value) >= 0 && parseInt(value) <= 59) {
+                                setMinutes(value);
+                                setTime(`${hours || '00'}:${value.padStart(2, '0')}`);
                               }
                             }}
                             className="bg-[#1F2937] border-gray-600 text-white h-8"
