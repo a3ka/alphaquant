@@ -301,7 +301,7 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                         className="text-gray-200 hover:bg-gray-700 focus:bg-gray-700 focus:text-white"
                       >
                         <span className="text-sm font-medium text-white">{p.name}</span>
-                        <span className="ml-2 text-xs text-gray-400">({p.type})</span>
+                        <span className="ml-2 text-xs text-gray-400">({p.type.toLowerCase()})</span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -386,7 +386,7 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                         className="text-gray-200 hover:bg-gray-700 focus:bg-gray-700 focus:text-white"
                       >
                         <span className="text-sm font-medium text-white">{p.name}</span>
-                        <span className="ml-2 text-xs text-gray-400">({p.type})</span>
+                        <span className="ml-2 text-xs text-gray-400">({p.type.toLowerCase()})</span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -414,7 +414,7 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                             p.type === 'spot' ? "bg-green-500" : "bg-yellow-500"
                           )} />
                           <span className="text-sm font-medium text-white">{p.name}</span>
-                          <span className="ml-2 text-xs text-gray-400">({p.type})</span>
+                          <span className="ml-2 text-xs text-gray-400">({p.type.toLowerCase()})</span>
                         </div>
                       </SelectItem>
                     ))}

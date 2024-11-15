@@ -77,3 +77,4 @@ export type Tables = {
 
 export type Portfolio = Tables['portfolios']['Row']
 export type Asset = Tables['assets']['Row']
+export type PortfolioType = "SPOT" | "MARGIN";

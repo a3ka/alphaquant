@@ -1,53 +1,47 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil, Info } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./Select"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Portfolio } from '@/utils/supabase'
-import { getUserPortfolios, updatePortfolioName, createPortfolio, deletePortfolio } from '@/utils/actions/portfolio-actions'
+import { Portfolio, PortfolioType } from '@/utils/supabase'
+import { getUserPortfolios, updatePortfolioName, createPortfolio, disablePortfolio } from '@/utils/actions/portfolio-actions'
 import { useUser } from '@clerk/nextjs'
 import { FakePortfolio } from '@/app/data/fakePortfolio'
 import { toast } from 'sonner'
+import { cn } from "@/lib/utils"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface PortfolioSelectorProps {
   onPortfolioChange: (portfolio: Portfolio) => void
 }
 
 export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps) {
-  const { user } = useUser()
+  const { user, isLoaded, isSignedIn } = useUser()
   const [portfolios, setPortfolios] = useState<Portfolio[]>([FakePortfolio])
   const [selectedPortfolio, setSelectedPortfolio] = useState<Portfolio>(FakePortfolio)
   const [isEditNameOpen, setIsEditNameOpen] = useState(false)
   const [isAddPortfolioOpen, setIsAddPortfolioOpen] = useState(false)
   const [newPortfolioName, setNewPortfolioName] = useState('')
-  const [portfolioType, setPortfolioType] = useState<'spot' | 'margin'>('spot')
+  const [portfolioType, setPortfolioType] = useState<PortfolioType>('SPOT')
   const [newName, setNewName] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
+  const [portfolioDescription, setPortfolioDescription] = useState('')
 
   useEffect(() => {
     const loadPortfolios = async () => {
-      console.log('Starting loadPortfolios function')
-      console.log('Current user:', user)
-      
-      if (!user?.id) {
-        console.log('No user ID found')
-        return
-      }
+      if (!isLoaded || !isSignedIn) return
       
       try {
-        console.log('Calling getUserPortfolios with userId:', user.id)
         const data = await getUserPortfolios(user.id)
-        console.log('Data received from getUserPortfolios:', data)
-        
         if (Array.isArray(data)) {
           setPortfolios([FakePortfolio, ...data])
         } else {
-          console.error('Data is not an array:', data)
           setError('Failed to load portfolios')
         }
       } catch (error) {
@@ -57,7 +51,7 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
     }
 
     loadPortfolios()
-  }, [user?.id])
+  }, [user?.id, isLoaded, isSignedIn])
 
   const handleUpdateName = async () => {
     if (!selectedPortfolio?.id || !newName) return
@@ -79,12 +73,16 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
     }
     if (!user?.id || !newPortfolioName) return
     try {
-      const newPortfolio = await createPortfolio(user.id, newPortfolioName, portfolioType)
+      const newPortfolio = await createPortfolio(
+        user.id, 
+        newPortfolioName, 
+        portfolioType,
+        portfolioDescription
+      )
       if (newPortfolio) {
         setPortfolios([...portfolios, newPortfolio])
         setIsAddPortfolioOpen(false)
-        setNewPortfolioName('')
-        setPortfolioType('spot')
+        resetCreatePortfolioForm()
       }
     } catch (error) {
       console.error('Failed to create portfolio:', error)
@@ -93,19 +91,31 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
 
   const handleDeletePortfolio = async () => {
     if (!selectedPortfolio?.id || selectedPortfolio.id === 'fake-portfolio') return
-    
+    setIsDeleteConfirmOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
     try {
-      await deletePortfolio(selectedPortfolio.id)
+      await disablePortfolio(selectedPortfolio.id)
       setPortfolios(portfolios.filter(p => p.id !== selectedPortfolio.id))
       setIsEditNameOpen(false)
+      setIsDeleteConfirmOpen(false)
       
       if (selectedPortfolio.id === selectedPortfolio.id) {
         setSelectedPortfolio(FakePortfolio)
         onPortfolioChange(FakePortfolio)
       }
+      toast.success("Portfolio successfully deleted")
     } catch (error) {
       console.error('Failed to delete portfolio:', error)
+      toast.error("Failed to delete portfolio")
     }
+  }
+
+  const resetCreatePortfolioForm = () => {
+    setNewPortfolioName('')
+    setPortfolioDescription('')
+    setPortfolioType('SPOT')
   }
 
   return (
@@ -124,7 +134,7 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
           }
         }}
       >
-        <SelectTrigger className="w-[160px] h-8 bg-[#1F2937] border-gray-800/50 text-sm whitespace-nowrap overflow-hidden text-ellipsis">
+        <SelectTrigger className="w-[160px] h-8 bg-[#1F2937] border-gray-800/50 text-sm text-white whitespace-nowrap overflow-hidden text-ellipsis">
           <SelectValue placeholder="Select Portfolio" />
         </SelectTrigger>
         <SelectContent>
@@ -134,7 +144,36 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
                 value={portfolio.id}
                 className="text-white text-sm hover:bg-[#374151] group pr-8"
               >
-                <span>{portfolio.id === 'fake-portfolio' ? 'Demo Portfolio' : portfolio.name}</span>
+                <div className="flex items-center gap-2">
+                  <div className={cn(
+                    "w-2 h-2 rounded-full",
+                    portfolio.id === 'fake-portfolio' 
+                      ? "bg-gray-500" 
+                      : portfolio.type === 'spot' 
+                        ? "bg-green-500" 
+                        : "bg-yellow-500"
+                  )} />
+                  <span>{portfolio.id === 'fake-portfolio' ? 'Demo Portfolio' : portfolio.name}</span>
+                  {portfolio.id !== 'fake-portfolio' && (
+                    <>
+                      <span className="text-xs text-gray-400">
+                        ({portfolio.type.toLowerCase()})
+                      </span>
+                      {portfolio.description && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="h-3 w-3 text-gray-400 hover:text-white cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="bg-[#1F2937] border-gray-600 text-white text-xs max-w-[200px]">
+                              {portfolio.description}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </>
+                  )}
+                </div>
               </SelectItem>
               {portfolio.id !== 'fake-portfolio' && (
                 <div
@@ -218,43 +257,141 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isAddPortfolioOpen} onOpenChange={setIsAddPortfolioOpen}>
-        <DialogContent>
+      <Dialog 
+        open={isAddPortfolioOpen} 
+        onOpenChange={(open) => {
+          if (!open) {
+            resetCreatePortfolioForm()
+          }
+          setIsAddPortfolioOpen(open)
+        }}
+      >
+        <DialogContent className="bg-[#0A1929] border border-gray-800/50 text-white sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Create New Portfolio</DialogTitle>
+            <DialogTitle className="text-lg font-semibold text-white">Create New Portfolio</DialogTitle>
+            <DialogDescription className="text-sm text-gray-400">
+              Add a new portfolio to track your investments
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Portfolio Name</Label>
+          <div className="space-y-6 py-4">
+            <div className="space-y-3">
+              <Label className="text-sm font-medium text-gray-300">Portfolio Name</Label>
               <Input 
                 value={newPortfolioName}
                 onChange={(e) => setNewPortfolioName(e.target.value)}
                 placeholder="Enter portfolio name"
                 maxLength={16}
-                className="bg-transparent border-gray-800 text-white"
+                className="bg-[#1F2937] border-gray-700 text-white placeholder:text-gray-500 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <div className="text-xs text-gray-400">
+                {16 - newPortfolioName.length} characters remaining
+              </div>
+            </div>
+            <div className="space-y-3">
+              <Label className="text-sm font-medium text-gray-300">Description</Label>
+              <Input 
+                value={portfolioDescription}
+                onChange={(e) => setPortfolioDescription(e.target.value)}
+                placeholder="Enter portfolio description (optional)"
+                className="bg-[#1F2937] border-gray-700 text-white placeholder:text-gray-500 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-            <div>
-              <Label>Type</Label>
+            <div className="space-y-3">
+              <Label className="text-sm font-medium text-gray-300">Portfolio Type</Label>
               <RadioGroup 
                 value={portfolioType}
-                onValueChange={(value) => setPortfolioType(value as 'spot' | 'margin')}
-                className="flex space-x-4"
+                onValueChange={(value) => setPortfolioType(value as PortfolioType)}
+                className="grid grid-cols-2 gap-4"
               >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="spot" id="spot" />
-                  <Label htmlFor="spot">Spot</Label>
+                <div className="relative">
+                  <RadioGroupItem
+                    value="SPOT"
+                    id="spot"
+                    className="peer sr-only"
+                  />
+                  <Label
+                    htmlFor="spot"
+                    className="flex flex-col items-center justify-between rounded-md border-2 border-gray-700 bg-[#1F2937] p-4 hover:bg-[#2D3748] hover:border-blue-500 peer-data-[state=checked]:border-blue-500 peer-data-[state=checked]:bg-blue-500/10 cursor-pointer"
+                  >
+                    <svg
+                      className="mb-2 h-6 w-6 text-blue-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Spot
+                  </Label>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="margin" id="margin" />
-                  <Label htmlFor="margin">Margin</Label>
+                <div className="relative">
+                  <RadioGroupItem
+                    value="MARGIN"
+                    id="margin"
+                    className="peer sr-only"
+                  />
+                  <Label
+                    htmlFor="margin"
+                    className="flex flex-col items-center justify-between rounded-md border-2 border-gray-700 bg-[#1F2937] p-4 hover:bg-[#2D3748] hover:border-yellow-500 peer-data-[state=checked]:border-yellow-500 peer-data-[state=checked]:bg-yellow-500/10 cursor-pointer"
+                  >
+                    <svg
+                      className="mb-2 h-6 w-6 text-yellow-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                    Margin
+                  </Label>
                 </div>
               </RadioGroup>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddPortfolioOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreatePortfolio}>Create</Button>
+          <DialogFooter className="gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                resetCreatePortfolioForm()
+                setIsAddPortfolioOpen(false)
+              }}
+              className="flex-1 bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreatePortfolio}
+              className="flex-1 bg-blue-500 text-white hover:bg-blue-600"
+            >
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent className="bg-[#1F2937] border border-gray-800">
+          <DialogHeader>
+            <DialogTitle className="text-white">Delete Portfolio</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Are you sure you want to delete portfolio "{selectedPortfolio?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteConfirmOpen(false)}
+              className="bg-transparent border-gray-600 text-gray-400 hover:bg-gray-800 hover:text-white"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

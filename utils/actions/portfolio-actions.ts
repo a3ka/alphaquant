@@ -88,12 +88,13 @@ export async function updatePortfolioName(portfolioId: string, newName: string) 
     const supabase = await getSupabaseClient()
     
     const { error } = await supabase
-      .from("portfolios")
+      .from("user_portfolio")
       .update({ name: newName })
       .eq("id", portfolioId)
 
     if (error) throw error
   } catch (error: any) {
+    console.error('Failed to update portfolio name:', error)
     throw new Error(error.message)
   }
 }
@@ -101,7 +102,8 @@ export async function updatePortfolioName(portfolioId: string, newName: string) 
 export async function createPortfolio(
   userId: string, 
   name: string, 
-  type: 'spot' | 'margin', 
+  type: 'SPOT' | 'MARGIN',
+  description?: string,
   marginData?: {
     sourcePortfolioId?: string
     assets?: Array<{symbol: string, amount: number}>
@@ -111,15 +113,14 @@ export async function createPortfolio(
     const supabase = await getSupabaseClient()
     
     const { data, error } = await supabase
-      .from("portfolios")
+      .from("user_portfolio")
       .insert([{ 
         user_id: userId,
         name,
-        type,
+        description,
+        type: type.toUpperCase(),
         is_active: true,
-        margin_data: marginData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_time: new Date().toISOString()
       }])
       .select()
       .single()
@@ -146,3 +147,57 @@ export async function deletePortfolio(portfolioId: string) {
     throw new Error(error.message)
   }
 } 
+
+export async function updatePortfolioBalance(
+  portfolioId: number,
+  coinTicker: string,
+  amount: number,
+  isMargin: boolean
+) {
+  try {
+    const supabase = await getSupabaseClient();
+
+    const { data: portfolio } = await supabase
+      .from("user_portfolio")
+      .select("type")
+      .eq("id", portfolioId)
+      .single();
+
+    if (!portfolio) {
+      throw new Error("Портфель не найден");
+    }
+
+    const { error } = await supabase
+      .from("portfolio_balance")
+      .upsert({
+        portfolio_id: portfolioId,
+        coin_ticker: coinTicker,
+        amount: amount,
+        in_collateral: isMargin ? amount : 0,
+        last_updated: new Date().toISOString()
+      }, {
+        onConflict: 'portfolio_id,coin_ticker'
+      });
+
+    if (error) throw error;
+  } catch (error: any) {
+    console.error('Failed to update portfolio balance:', error);
+    throw new Error(error.message);
+  }
+}
+
+export async function disablePortfolio(portfolioId: string) {
+  try {
+    const supabase = await getSupabaseClient()
+    
+    const { error } = await supabase
+      .from("user_portfolio")
+      .update({ is_active: false })
+      .eq("id", portfolioId)
+
+    if (error) throw error
+  } catch (error: any) {
+    console.error('Failed to disable portfolio:', error)
+    throw new Error(error.message)
+  }
+}

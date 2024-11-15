@@ -70,3 +70,11 @@
     @apply bg-background text-foreground;
   }
 }
+
+select, select option {
+  color: white;
+}
+
+.select-trigger {
+  color: white !important;
+}
