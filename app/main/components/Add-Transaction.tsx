@@ -16,6 +16,8 @@ import { getUserPortfolios } from '@/utils/actions/portfolio-actions'
 import { useUser } from '@clerk/nextjs'
 import { Portfolio } from '@/utils/supabase'
 import { FakePortfolio } from '@/app/data/fakePortfolio'
+import { AddStablecoinDialog } from './AddStablecoinDialog'
+import { toast } from "sonner"
 
 const coins = [
   { label: "Bitcoin", value: "BTC", icon: "https://assets.coingecko.com/coins/images/1/standard/bitcoin.png?1696501400", amount: 1.5 },
@@ -44,9 +46,10 @@ const getRatioColor = (ratio: number) => {
 interface AddTransactionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  selectedPortfolioId: string;
 }
 
-export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialogProps) {
+export function AddTransactionDialog({ open, onOpenChange, selectedPortfolioId }: AddTransactionDialogProps) {
   const { user } = useUser()
   const [portfolios, setPortfolios] = useState<Portfolio[]>([FakePortfolio])
   
@@ -67,7 +70,7 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
   }, [user?.id])
 
   const [transactionType, setTransactionType] = useState('buy')
-  const [portfolio, setPortfolio] = useState('')
+  const [portfolio, setPortfolio] = useState(selectedPortfolioId)
   const [sourcePortfolio, setSourcePortfolio] = useState('')
   const [targetPortfolio, setTargetPortfolio] = useState('')
   const [selectedCoin, setSelectedCoin] = useState("")
@@ -84,18 +87,24 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
   const [dateInput, setDateInput] = useState('')
   const [hours, setHours] = useState('');
   const [minutes, setMinutes] = useState('');
+  const [isAddStablecoinOpen, setIsAddStablecoinOpen] = useState(false)
 
   useEffect(() => {
     if (portfolios.length > 0) {
-      setPortfolio(portfolios[0].id)
-      setSourcePortfolio(portfolios[0].id)
-      if (portfolios.length > 1) {
-        setTargetPortfolio(portfolios[1].id)
-      } else {
-        setTargetPortfolio(portfolios[0].id)
+      console.log('Loading portfolios:', portfolios)
+      const realPortfolio = portfolios.find(p => p.id !== 'fake-portfolio')
+      if (realPortfolio) {
+        console.log('Setting initial portfolio ID:', realPortfolio.id)
+        setPortfolio(String(realPortfolio.id))
+        setSourcePortfolio(String(realPortfolio.id))
+        setTargetPortfolio(String(realPortfolio.id))
       }
     }
   }, [portfolios])
+
+  useEffect(() => {
+    setPortfolio(selectedPortfolioId)
+  }, [selectedPortfolioId])
 
   const handleTransactionTypeChange = (type: string) => {
     setTransactionType(type)
@@ -397,7 +406,11 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
             <>
               <div className="space-y-2">
                 <Label htmlFor="portfolio" className="text-sm font-medium text-gray-300">Portfolio</Label>
-                <Select value={portfolio} onValueChange={setPortfolio}>
+                <Select value={portfolio} onValueChange={(value) => {
+                  console.log('Portfolio selected:', value)
+                  console.log('Portfolio type:', typeof value)
+                  setPortfolio(value)
+                }}>
                   <SelectTrigger id="portfolio" className="w-full bg-[#1F2937] border-gray-600">
                     <SelectValue placeholder="Select portfolio" />
                   </SelectTrigger>
@@ -502,23 +515,35 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                   <Label htmlFor="paymentMethod" className="text-sm font-medium text-gray-300">
                     {transactionType === 'buy' ? 'Payment Method' : 'Receive Method'}
                   </Label>
-                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                    <SelectTrigger id="paymentMethod" className="w-full bg-[#1F2937] border-gray-600">
-                      <SelectValue placeholder={`Select ${transactionType === 'buy' ? 'payment' : 'receive'} method`} />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#1F2937] border-gray-600">
-                      {paymentMethods.map((method) => (
-                        <SelectItem 
-                          key={method.value} 
-                          value={method.value}
-                          className="text-gray-200 hover:bg-gray-700 focus:bg-gray-700 focus:text-white"
-                        >
-                          <span className="text-sm font-medium text-white">{method.label}</span>
-                          {!isMarginPortfolio && <span className="ml-2 text-xs text-gray-400">({method.balance})</span>}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-2">
+                    <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                      <SelectTrigger id="paymentMethod" className="w-full bg-[#1F2937] border-gray-600">
+                        <SelectValue placeholder={`Select ${transactionType === 'buy' ? 'payment' : 'receive'} method`} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#1F2937] border-gray-600">
+                        {paymentMethods.map((method) => (
+                          <SelectItem 
+                            key={method.value} 
+                            value={method.value}
+                            className="text-gray-200 hover:bg-gray-700 focus:bg-gray-700 focus:text-white"
+                          >
+                            <span className="text-sm font-medium text-white">{method.label}</span>
+                            {!isMarginPortfolio && <span className="ml-2 text-xs text-gray-400">({method.balance})</span>}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    
+                    {transactionType === 'buy' && (
+                      <Button
+                        onClick={() => setIsAddStablecoinOpen(true)}
+                        variant="ghost"
+                        className="w-full text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 text-xs"
+                      >
+                        + Add More Stablecoins to Portfolio
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -783,6 +808,26 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
           </DialogContent>
         </Dialog>
       )}
+      <AddStablecoinDialog
+        open={isAddStablecoinOpen}
+        onOpenChange={(open) => {
+          console.log('Dialog opening state:', open)
+          console.log('Current portfolio state:', portfolio)
+          if (open && portfolio === 'fake-portfolio') {
+            toast.error("Cannot add stablecoins to demo portfolio")
+            return
+          }
+          if (open && !portfolio) {
+            toast.error("Please select a portfolio first")
+            return
+          }
+          setIsAddStablecoinOpen(open)
+        }}
+        portfolioId={portfolio === 'fake-portfolio' ? undefined : Number(portfolio)}
+        onSuccess={() => {
+          console.log('Transaction successful with portfolio:', portfolio)
+        }}
+      />
     </Dialog>
   )
 }

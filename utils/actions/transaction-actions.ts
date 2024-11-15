@@ -85,6 +85,45 @@ export async function createTransaction({
       .single()
 
     if (error) throw error
+
+    const { data: existingBalance, error: balanceError } = await supabase
+      .from('portfolio_balance')
+      .select('*')
+      .eq('portfolio_id', portfolioId)
+      .eq('coin_ticker', coinTicker)
+      .single();
+
+    if (balanceError && balanceError.code !== 'PGRST116') { // PGRST116 = не найдено
+      throw balanceError;
+    }
+
+    if (existingBalance) {
+      const newAmount = type === 'BUY' 
+        ? existingBalance.amount + amount
+        : existingBalance.amount - amount;
+
+      const { error: updateError } = await supabase
+        .from('portfolio_balance')
+        .update({ 
+          amount: newAmount,
+          last_updated: new Date().toISOString()
+        })
+        .eq('id', existingBalance.id);
+
+      if (updateError) throw updateError;
+    } else {
+      const { error: insertError } = await supabase
+        .from('portfolio_balance')
+        .insert({
+          portfolio_id: portfolioId,
+          coin_ticker: coinTicker,
+          amount: type === 'BUY' ? amount : -amount,
+          last_updated: new Date().toISOString()
+        });
+
+      if (insertError) throw insertError;
+    }
+
     return data
   } catch (error: any) {
     console.error('Failed to create transaction:', error)

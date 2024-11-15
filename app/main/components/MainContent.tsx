@@ -330,6 +330,7 @@ const getDateFormatter = (range: TimeRangeType) => {
 export function MainContent() {
   const { user } = useUser()
   const [selectedPortfolio, setSelectedPortfolio] = useState<Portfolio | null>(null)
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>('')
   
   // Добавляем к существующим useState
   const [timeRange, setTimeRange] = useState<TimeRangeType>('24H')
@@ -340,6 +341,7 @@ export function MainContent() {
 
   const handlePortfolioChange = (portfolio: Portfolio) => {
     setSelectedPortfolio(portfolio)
+    setSelectedPortfolioId(portfolio.id)
     
     if (portfolio.id === 'fake-portfolio') {
       // Используем демо-данные
@@ -801,6 +803,7 @@ export function MainContent() {
       <AddTransactionDialog 
         open={isAddTransactionOpen}
         onOpenChange={setIsAddTransactionOpen}
+        selectedPortfolioId={selectedPortfolioId}
       />
     </main>
   )
