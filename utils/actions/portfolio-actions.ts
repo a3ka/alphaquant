@@ -2,7 +2,7 @@
 
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
-import type { Portfolio } from '@/utils/supabase'
+import type { Portfolio, UserPortfolio } from '@/src/types/portfolio.types'
 
 const getSupabaseClient = async () => {
   const supabaseUrl = process.env.SUPABASE_URL
@@ -31,8 +31,7 @@ const getSupabaseClient = async () => {
   )
 }
 
-export async function getUserPortfolios(userId: string): Promise<Portfolio[]> {
-  console.log('getUserPortfolios called with userId:', userId)
+export async function getUserPortfolios(userId: string): Promise<UserPortfolio[]> {
   try {
     const supabase = await getSupabaseClient()
     
@@ -45,38 +44,20 @@ export async function getUserPortfolios(userId: string): Promise<Portfolio[]> {
         type,
         description,
         is_active,
-        created_time
+        created_time,
+        balances:portfolio_balance (
+          coin_ticker,
+          amount,
+          borrowed,
+          in_collateral,
+          last_updated
+        )
       `)
       .eq("user_id", userId)
       .eq("is_active", true)
 
-    console.log('Raw query result:', { data, error })
-
-    if (error) {
-      console.error('Supabase error:', error)
-      throw error
-    }
-
-    const portfolios: Portfolio[] = data.map(portfolio => ({
-      id: portfolio.id.toString(),
-      user_id: portfolio.user_id,
-      name: portfolio.name,
-      type: portfolio.type.toLowerCase(),
-      description: portfolio.description || '',
-      is_active: portfolio.is_active,
-      created_at: portfolio.created_time,
-      updated_at: portfolio.created_time,
-      data: {
-        assets: [],
-        pieChartData: [],
-        chartData: [],
-        totalValue: 0,
-        totalProfit: 0,
-        profitPercentage: 0
-      }
-    }))
-
-    return portfolios
+    if (error) throw error
+    return data as UserPortfolio[]
   } catch (error: any) {
     console.error('getUserPortfolios error:', error)
     return []
@@ -100,15 +81,11 @@ export async function updatePortfolioName(portfolioId: string, newName: string) 
 }
 
 export async function createPortfolio(
-  userId: string, 
-  name: string, 
+  userId: string,
+  name: string,
   type: 'SPOT' | 'MARGIN',
-  description?: string,
-  marginData?: {
-    sourcePortfolioId?: string
-    assets?: Array<{symbol: string, amount: number}>
-  }
-): Promise<Portfolio> {
+  description?: string
+): Promise<UserPortfolio> {
   try {
     const supabase = await getSupabaseClient()
     
@@ -126,7 +103,7 @@ export async function createPortfolio(
       .single()
 
     if (error) throw error
-    return data as Portfolio
+    return data as UserPortfolio
   } catch (error: any) {
     console.error('Failed to create portfolio:', error)
     throw new Error(error.message)
@@ -198,6 +175,40 @@ export async function disablePortfolio(portfolioId: string) {
     if (error) throw error
   } catch (error: any) {
     console.error('Failed to disable portfolio:', error)
+    throw new Error(error.message)
+  }
+}
+
+export async function getPortfolioBalances(portfolioId: string) {
+  try {
+    const supabase = await getSupabaseClient()
+    
+    const { data, error } = await supabase
+      .from("portfolio_balance")
+      .select(`
+        id,
+        coin_ticker,
+        amount,
+        borrowed,
+        in_collateral,
+        last_updated
+      `)
+      .eq("portfolio_id", portfolioId)
+
+    if (error) throw error
+
+    // Проверяем есть ли балансы с ненулевым количеством
+    const hasNonZeroBalance = data?.some(balance => 
+      balance.amount > 0 || balance.borrowed > 0 || balance.in_collateral > 0
+    )
+
+    return {
+      balances: data || [],
+      isEmpty: !hasNonZeroBalance
+    }
+
+  } catch (error: any) {
+    console.error('Failed to get portfolio balances:', error)
     throw new Error(error.message)
   }
 }

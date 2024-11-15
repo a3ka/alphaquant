@@ -15,8 +15,10 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useUser } from "@clerk/nextjs"
-import type { Portfolio } from '@/utils/supabase'
+import { Portfolio, Asset, isDemoPortfolio } from '@/src/types/portfolio.types'
 import { PortfolioSelector } from './PortfolioSelector'
+import { getUserPortfolios, getPortfolioBalances } from '@/utils/actions/portfolio-actions'
+import { FakePortfolio } from '@/app/data/fakePortfolio'
 
 // Portfolio data with a clear trend
 const portfolioData = [
@@ -331,32 +333,75 @@ export function MainContent() {
   const { user } = useUser()
   const [selectedPortfolio, setSelectedPortfolio] = useState<Portfolio | null>(null)
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>('')
+  const [portfolios, setPortfolios] = useState<Portfolio[]>([])
   
-  // Добавляем к существующим useState
-  const [timeRange, setTimeRange] = useState<TimeRangeType>('24H')
-  const [selectedAsset, setSelectedAsset] = useState<typeof initialAssets[0] | null>(null)
-  const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false)
-  const [chartData, setChartData] = useState(portfolioData)
-  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    const loadPortfolios = async () => {
+      if (!user?.id) return
+      try {
+        const data = await getUserPortfolios(user.id)
+        if (Array.isArray(data)) {
+          const existingFakePortfolio = data.find(p => p.id.toString() === 'fake-portfolio')
+          if (!existingFakePortfolio) {
+            setPortfolios([FakePortfolio, ...data])
+          } else {
+            setPortfolios(data)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load portfolios:', error)
+      }
+    }
+    loadPortfolios()
+  }, [user?.id])
 
   const handlePortfolioChange = (portfolio: Portfolio) => {
-    setSelectedPortfolio(portfolio)
-    setSelectedPortfolioId(portfolio.id)
+    const foundPortfolio = portfolios.find((p: Portfolio) => 
+      p.id.toString() === portfolio.id.toString()
+    )
     
-    if (portfolio.id === 'fake-portfolio') {
-      // Используем демо-данные
+    if (!foundPortfolio) {
+      console.error('Portfolio not found:', portfolio.id)
+      return
+    }
+    
+    setSelectedPortfolio(foundPortfolio)
+    setSelectedPortfolioId(foundPortfolio.id.toString())
+    
+    if (isDemoPortfolio(foundPortfolio)) {
       setChartData(portfolioData)
       setSelectedAsset(null)
     } else {
-      // Для реального портфеля используем его данные или показываем пустое состояние
-      if (!portfolio.data || !portfolio.data.chartData) {
-        setChartData([])
-        setSelectedAsset(null)
-      } else {
-        setChartData(portfolio.data.chartData)
-      }
+      setChartData([])
+      setSelectedAsset(null)
     }
   }
+
+  // Добавляем к существующим useState
+  const [timeRange, setTimeRange] = useState<TimeRangeType>('24H')
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
+  const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false)
+  const [chartData, setChartData] = useState(portfolioData)
+  const [error, setError] = useState<string | null>(null)
+  const [portfolioBalances, setPortfolioBalances] = useState<{
+    balances: any[],
+    isEmpty: boolean
+  }>({ balances: [], isEmpty: true })
+
+  useEffect(() => {
+    const loadBalances = async () => {
+      if (selectedPortfolio && selectedPortfolio.id !== 'fake-portfolio') {
+        try {
+          const data = await getPortfolioBalances(selectedPortfolio.id.toString())
+          setPortfolioBalances(data)
+        } catch (error) {
+          console.error('Failed to load portfolio balances:', error)
+        }
+      }
+    }
+
+    loadBalances()
+  }, [selectedPortfolio])
 
   // 2. Все useMemo хуки
   const highestValue = useMemo(() => 
@@ -441,10 +486,10 @@ export function MainContent() {
     });
   };
 
-  // В начале компонента MainContent добавим проверку на пустой портфель
+  // Обновляем проверку пустого портфеля
   const isEmptyPortfolio = selectedPortfolio && 
     selectedPortfolio.id !== 'fake-portfolio' && 
-    (!selectedPortfolio.data || !selectedPortfolio.data.chartData || selectedPortfolio.data.chartData.length === 0)
+    portfolioBalances.isEmpty
 
   return (
     <main className="w-full bg-[#010714] rounded-lg border border-gray-800/30">

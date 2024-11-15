@@ -3,20 +3,7 @@
 import { Plus } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Avatar } from "@/components/ui/avatar"
-
-interface Asset {
-  name: string
-  symbol: string
-  logo?: string
-  amount: number
-  price: number
-  change24h: number
-  change7d: number
-  value: number
-  profit: number
-  percentage: number
-  color: string
-}
+import { Asset } from '@/src/types/portfolio.types'
 
 interface PortfolioTableProps {
   assets: Asset[]

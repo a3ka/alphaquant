@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Portfolio, PortfolioType } from '@/utils/supabase'
+import { Portfolio, PortfolioType } from '@/src/types/portfolio.types'
 import { getUserPortfolios, updatePortfolioName, createPortfolio, disablePortfolio } from '@/utils/actions/portfolio-actions'
 import { useUser } from '@clerk/nextjs'
 import { FakePortfolio } from '@/app/data/fakePortfolio'
@@ -56,7 +56,7 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
   const handleUpdateName = async () => {
     if (!selectedPortfolio?.id || !newName) return
     try {
-      await updatePortfolioName(selectedPortfolio.id, newName)
+      await updatePortfolioName(selectedPortfolio.id.toString(), newName)
       setPortfolios(portfolios.map(p => 
         p.id === selectedPortfolio.id ? { ...p, name: newName } : p
       ))
@@ -72,20 +72,31 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
       return;
     }
     if (!user?.id || !newPortfolioName) return
+
     try {
       const newPortfolio = await createPortfolio(
-        user.id, 
-        newPortfolioName, 
+        user.id,
+        newPortfolioName,
         portfolioType,
-        portfolioDescription
+        portfolioDescription || undefined
       )
-      if (newPortfolio) {
-        setPortfolios([...portfolios, newPortfolio])
-        setIsAddPortfolioOpen(false)
-        resetCreatePortfolioForm()
-      }
+
+      setPortfolios(prev => {
+        const withoutFake = prev.filter(p => p.id !== 'fake-portfolio')
+        return [FakePortfolio, ...withoutFake, newPortfolio]
+      })
+      setSelectedPortfolio(newPortfolio)
+      onPortfolioChange(newPortfolio)
+      
+      setIsAddPortfolioOpen(false)
+      setNewPortfolioName('')
+      setPortfolioDescription('')
+      setPortfolioType('SPOT')
+      
+      toast.success('Portfolio created successfully')
     } catch (error) {
       console.error('Failed to create portfolio:', error)
+      toast.error('Failed to create portfolio')
     }
   }
 
@@ -96,7 +107,7 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
 
   const handleConfirmDelete = async () => {
     try {
-      await disablePortfolio(selectedPortfolio.id)
+      await disablePortfolio(selectedPortfolio.id.toString())
       setPortfolios(portfolios.filter(p => p.id !== selectedPortfolio.id))
       setIsEditNameOpen(false)
       setIsDeleteConfirmOpen(false)
@@ -118,21 +129,25 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
     setPortfolioType('SPOT')
   }
 
+  const handlePortfolioChange = (value: string) => {
+    if (value === "add") {
+      setIsAddPortfolioOpen(true)
+      return
+    }
+    const portfolio = portfolios.find(p => p.id.toString() === value)
+    if (!portfolio) {
+      console.error('Portfolio not found:', value)
+      return
+    }
+    setSelectedPortfolio(portfolio)
+    onPortfolioChange(portfolio)
+  }
+
   return (
     <>
       <Select
-        value={selectedPortfolio.id}
-        onValueChange={(value) => {
-          if (value === "add") {
-            setIsAddPortfolioOpen(true)
-            return
-          }
-          const portfolio = portfolios.find(p => p.id === value)
-          if (portfolio) {
-            setSelectedPortfolio(portfolio)
-            onPortfolioChange(portfolio)
-          }
-        }}
+        value={selectedPortfolio?.id.toString() || ''}
+        onValueChange={handlePortfolioChange}
       >
         <SelectTrigger className="w-[160px] h-8 bg-[#1F2937] border-gray-800/50 text-sm text-white whitespace-nowrap overflow-hidden text-ellipsis">
           <SelectValue placeholder="Select Portfolio" />
@@ -141,7 +156,7 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
           {portfolios.map((portfolio) => (
             <div key={portfolio.id} className="relative">
               <SelectItem 
-                value={portfolio.id}
+                value={portfolio.id.toString()}
                 className="text-white text-sm hover:bg-[#374151] group pr-8"
               >
                 <div className="flex items-center gap-2">
@@ -149,7 +164,7 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
                     "w-2 h-2 rounded-full",
                     portfolio.id === 'fake-portfolio' 
                       ? "bg-gray-500" 
-                      : portfolio.type === 'spot' 
+                      : portfolio.type === 'SPOT' 
                         ? "bg-green-500" 
                         : "bg-yellow-500"
                   )} />
@@ -348,22 +363,13 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
               </RadioGroup>
             </div>
           </div>
-          <DialogFooter className="gap-3">
-            <Button
-              variant="outline"
-              onClick={() => {
-                resetCreatePortfolioForm()
-                setIsAddPortfolioOpen(false)
-              }}
-              className="flex-1 bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
-            >
-              Cancel
-            </Button>
+          <DialogFooter>
             <Button
               onClick={handleCreatePortfolio}
-              className="flex-1 bg-blue-500 text-white hover:bg-blue-600"
+              disabled={!newPortfolioName}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             >
-              Create
+              Create Portfolio
             </Button>
           </DialogFooter>
         </DialogContent>

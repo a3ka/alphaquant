@@ -14,7 +14,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
 import { getUserPortfolios } from '@/utils/actions/portfolio-actions'
 import { useUser } from '@clerk/nextjs'
-import { Portfolio } from '@/utils/supabase'
+import { Portfolio, isDemoPortfolio } from '@/src/types/portfolio.types'
 import { FakePortfolio } from '@/app/data/fakePortfolio'
 import { AddStablecoinDialog } from './AddStablecoinDialog'
 import { toast } from "sonner"
@@ -70,9 +70,9 @@ export function AddTransactionDialog({ open, onOpenChange, selectedPortfolioId }
   }, [user?.id])
 
   const [transactionType, setTransactionType] = useState('buy')
-  const [portfolio, setPortfolio] = useState(selectedPortfolioId)
-  const [sourcePortfolio, setSourcePortfolio] = useState('')
-  const [targetPortfolio, setTargetPortfolio] = useState('')
+  const [portfolio, setPortfolio] = useState<string>('')
+  const [sourcePortfolio, setSourcePortfolio] = useState<string>('')
+  const [targetPortfolio, setTargetPortfolio] = useState<string>('')
   const [selectedCoin, setSelectedCoin] = useState("")
   const [paymentMethod, setPaymentMethod] = useState("")
   const [amount, setAmount] = useState('')
@@ -91,13 +91,12 @@ export function AddTransactionDialog({ open, onOpenChange, selectedPortfolioId }
 
   useEffect(() => {
     if (portfolios.length > 0) {
-      console.log('Loading portfolios:', portfolios)
       const realPortfolio = portfolios.find(p => p.id !== 'fake-portfolio')
       if (realPortfolio) {
-        console.log('Setting initial portfolio ID:', realPortfolio.id)
-        setPortfolio(String(realPortfolio.id))
-        setSourcePortfolio(String(realPortfolio.id))
-        setTargetPortfolio(String(realPortfolio.id))
+        const portfolioId = realPortfolio.id.toString()
+        setPortfolio(portfolioId)
+        setSourcePortfolio(portfolioId)
+        setTargetPortfolio(portfolioId)
       }
     }
   }, [portfolios])
@@ -160,11 +159,12 @@ export function AddTransactionDialog({ open, onOpenChange, selectedPortfolioId }
   ]
 
   const selectedPortfolio = portfolios?.find(p => p.id === portfolio)
-  const isMarginPortfolio = selectedPortfolio?.type === 'margin'
+  const isMarginPortfolio = selectedPortfolio?.type.toLowerCase() === 'margin'
   const totalValue = Number(amount) * Number(price)
 
-  // Получаем значения из правильных мест в объекте
-  const currentAssets = selectedPortfolio?.data?.totalValue || 0
+  const currentAssets = selectedPortfolio && isDemoPortfolio(selectedPortfolio) 
+    ? selectedPortfolio.data.totalValue 
+    : 0
   const currentDebt = selectedPortfolio?.margin_data?.debt || 0
 
   let newAssets, newDebt, currentRatio, newRatio
@@ -241,9 +241,9 @@ export function AddTransactionDialog({ open, onOpenChange, selectedPortfolioId }
   // Функция сброса всех полей
   const resetForm = () => {
     setTransactionType('buy');
-    setPortfolio(portfolios[0].id);
-    setSourcePortfolio(portfolios[0].id);
-    setTargetPortfolio(portfolios[1].id);
+    setPortfolio(portfolios[0].id.toString());
+    setSourcePortfolio(portfolios[0].id.toString());
+    setTargetPortfolio(portfolios[1]?.id.toString() || portfolios[0].id.toString());
     setSelectedCoin("");
     setPaymentMethod("");
     setAmount('');
@@ -305,8 +305,8 @@ export function AddTransactionDialog({ open, onOpenChange, selectedPortfolioId }
                   <SelectContent className="bg-[#1F2937] border-gray-600">
                     {portfolios.map((p) => (
                       <SelectItem 
-                        key={p.id} 
-                        value={p.id}
+                        key={p.id.toString()} 
+                        value={p.id.toString()}
                         className="text-gray-200 hover:bg-gray-700 focus:bg-gray-700 focus:text-white"
                       >
                         <span className="text-sm font-medium text-white">{p.name}</span>
@@ -390,8 +390,8 @@ export function AddTransactionDialog({ open, onOpenChange, selectedPortfolioId }
                   <SelectContent className="bg-[#1F2937] border-gray-600">
                     {portfolios.map((p) => (
                       <SelectItem 
-                        key={p.id} 
-                        value={p.id}
+                        key={p.id.toString()} 
+                        value={p.id.toString()}
                         className="text-gray-200 hover:bg-gray-700 focus:bg-gray-700 focus:text-white"
                       >
                         <span className="text-sm font-medium text-white">{p.name}</span>
@@ -417,14 +417,14 @@ export function AddTransactionDialog({ open, onOpenChange, selectedPortfolioId }
                   <SelectContent className="bg-[#1F2937] border-gray-600">
                     {portfolios?.map((p) => (
                       <SelectItem 
-                        key={p.id} 
-                        value={p.id}
+                        key={p.id.toString()} 
+                        value={p.id.toString()}
                         className="text-gray-200 hover:bg-gray-700 focus:bg-gray-700 focus:text-white"
                       >
                         <div className="flex items-center gap-2">
                           <div className={cn(
                             "w-2 h-2 rounded-full",
-                            p.type === 'spot' ? "bg-green-500" : "bg-yellow-500"
+                            p.type === 'SPOT' ? "bg-green-500" : "bg-yellow-500"
                           )} />
                           <span className="text-sm font-medium text-white">{p.name}</span>
                           <span className="ml-2 text-xs text-gray-400">({p.type.toLowerCase()})</span>
@@ -675,7 +675,7 @@ export function AddTransactionDialog({ open, onOpenChange, selectedPortfolioId }
                       return;
                     }
 
-                    // Удаляем все нецифровые символы и двоеточие
+                    // Удаляем все нецифровые имволы и двоеточие
                     value = value.replace(/[^\d:]/g, '');
                     
                     // Если есть двоеточие, обрабатываем часы и минуты отдельно

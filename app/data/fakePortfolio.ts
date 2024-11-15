@@ -1,42 +1,6 @@
-export interface Asset {
-  name: string
-  symbol: string
-  logo: string
-  amount: number
-  price: number
-  change24h: number
-  change7d: number
-  value: number
-  profit: number
-  percentage: number
-  color: string
-}
-
-export interface PortfolioData {
-  assets: Asset[]
-  pieChartData: Asset[]
-  chartData: {
-    date: string
-    value: number
-  }[]
-  totalValue: number
-  totalProfit: number
-  profitPercentage: number
-}
-
-export interface Portfolio {
-  id: string
-  name: string
-  user_id: string
-  type: 'spot' | 'margin'
-  description: string
-  is_active: boolean
-  created_at: string
-  updated_at: string
-  data: PortfolioData
-}
-
 // Перенести сюда все initialAssets и portfolioData
+import { Asset, DemoPortfolio } from '@/src/types/portfolio.types'
+
 export const initialAssets: Asset[] = [
   { 
     name: 'Stark Network',
@@ -183,11 +147,11 @@ export const portfolioChartData = [
     { date: '2024-04-01', value: 299441 }
 ]
 
-export const FakePortfolio: Portfolio = {
+export const FakePortfolio: DemoPortfolio = {
   id: 'fake-portfolio',
   name: 'Demo Portfolio',
   user_id: 'demo',
-  type: 'spot',
+  type: 'SPOT',
   description: 'Demo portfolio with sample data',
   is_active: true,
   created_at: new Date().toISOString(),
