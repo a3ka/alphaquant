@@ -183,7 +183,7 @@ export async function getPortfolioBalances(portfolioId: string) {
   try {
     const supabase = await getSupabaseClient()
     
-    const { data, error } = await supabase
+    const { data: balances, error } = await supabase
       .from("portfolio_balance")
       .select(`
         id,
@@ -197,13 +197,12 @@ export async function getPortfolioBalances(portfolioId: string) {
 
     if (error) throw error
 
-    // Проверяем есть ли балансы с ненулевым количеством
-    const hasNonZeroBalance = data?.some(balance => 
+    const hasNonZeroBalance = balances.some(balance => 
       balance.amount > 0 || balance.borrowed > 0 || balance.in_collateral > 0
     )
 
     return {
-      balances: data || [],
+      balances,
       isEmpty: !hasNonZeroBalance
     }
 

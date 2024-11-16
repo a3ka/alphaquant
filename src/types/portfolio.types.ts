@@ -59,3 +59,17 @@ export interface Asset {
   export const isDemoPortfolio = (portfolio: Portfolio): portfolio is DemoPortfolio => {
     return typeof portfolio?.id === 'string'
   }
+  
+  export interface PortfolioBalance {
+    id: string
+    coin_ticker: string
+    amount: number
+    borrowed: number
+    in_collateral: number
+    last_updated: string
+  }
+  
+  export interface PortfolioBalancesResponse {
+    balances: PortfolioBalance[]
+    isEmpty: boolean
+  }
