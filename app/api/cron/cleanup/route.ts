@@ -1,10 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 import { portfolioService } from '@/src/services/portfolio'
 
 export async function GET(request: NextRequest) {
   try {
+    // Проверка авторизации для cron-job
+    const headersList = await headers()
+    const authToken = headersList.get('authorization')
+    
+    if (authToken !== process.env.CRON_SECRET) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     await portfolioService.cleanupOldHistory()
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ 
+      success: true,
+      message: 'Portfolio history cleanup completed'
+    })
   } catch (error: any) {
     console.error('Cleanup job failed:', error)
     return NextResponse.json(
