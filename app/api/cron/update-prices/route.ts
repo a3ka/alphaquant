@@ -1,10 +1,10 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { marketService } from '@/src/services/market'
 import { portfolioService } from '@/src/services/portfolio'
 import { Period } from '@/src/types/portfolio.types'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     // Проверка авторизации для cron-job
     const headersList = await headers()

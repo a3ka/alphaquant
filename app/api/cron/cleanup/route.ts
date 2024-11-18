@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { portfolioService } from '@/src/services/portfolio'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     await portfolioService.cleanupOldHistory()
     return NextResponse.json({ success: true })
