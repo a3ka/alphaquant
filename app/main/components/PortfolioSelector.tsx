@@ -390,7 +390,7 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
           <DialogHeader>
             <DialogTitle className="text-white">Delete Portfolio</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Are you sure you want to delete portfolio '{selectedPortfolio?.name}'? This action cannot be undone.
+              Are you sure you want to delete portfolio &apos;{selectedPortfolio?.name}&apos;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2">
