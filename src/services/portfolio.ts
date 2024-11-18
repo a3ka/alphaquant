@@ -261,6 +261,23 @@ export const portfolioService = {
 
       if (error) throw error
     }
+  },
+
+  async getAllActivePortfolios() {
+    try {
+      const supabase = await createServerSupabaseClient()
+      
+      const { data, error } = await supabase
+        .from("user_portfolio")
+        .select("*")
+        .eq("is_active", true)
+
+      if (error) throw error
+      return data
+    } catch (error: any) {
+      console.error('Failed to get active portfolios:', error)
+      throw new Error(error.message)
+    }
   }
 }
 
