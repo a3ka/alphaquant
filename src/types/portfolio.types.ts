@@ -61,7 +61,8 @@ export interface Asset {
   }
   
   export interface PortfolioBalance {
-    id: string
+    id: number
+    portfolio_id: number
     coin_ticker: string
     amount: number
     borrowed: number
@@ -73,3 +74,21 @@ export interface Asset {
     balances: PortfolioBalance[]
     isEmpty: boolean
   }
+  
+  export enum Period {
+    MINUTE_15 = 'MINUTE_15',
+    HOUR_1 = 'HOUR_1',
+    HOUR_4 = 'HOUR_4',
+    HOUR_24 = 'HOUR_24',
+    DAY_1 = 'DAY_1'
+  }
+  
+  export interface PortfolioHistory {
+    id: number
+    portfolio_id: number
+    total_value: number
+    timestamp: Date
+    period: Period
+  }
+
+  

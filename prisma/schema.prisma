@@ -17,13 +17,15 @@ model user {
   gender            String?
   profile_image_url String?
   user_id           String   @unique
-  subscription      String?
   
+  // Связи
   portfolios        user_portfolio[]
   transactions      crypto_transaction[]
-
+  subscriptions     subscriptions[] // Добавляем связь с подписками
+  
   @@index([user_id])
 }
+
 
 model payments {
   id               Int      @id @default(autoincrement())
@@ -39,10 +41,11 @@ model payments {
   payment_intent   String
 }
 
+
 model subscriptions {
   id                        Int      @id @default(autoincrement())
   created_time              DateTime @default(now())
-  subscription_id           String
+  subscription_id           String   @unique
   stripe_user_id            String
   status                    String
   start_date                String
@@ -51,17 +54,29 @@ model subscriptions {
   default_payment_method_id String?
   email                     String
   user_id                   String
+
+  // Связи
+  user user @relation(fields: [user_id], references: [user_id])
+  plan subscriptions_plans @relation(fields: [plan_id], references: [plan_id])
+  
+  @@index([user_id])
+  @@index([plan_id])
 }
+
+
 
 model subscriptions_plans {
   id           Int      @id @default(autoincrement())
   created_time DateTime @default(now())
-  plan_id      String
+  plan_id      String   @unique
   name         String
   description  String
   amount       String
   currency     String
   interval     String
+
+  // Обратная связь
+  subscriptions subscriptions[]
 }
 
 model invoices {
@@ -102,6 +117,7 @@ model user_portfolio {
   user            user                  @relation(fields: [user_id], references: [user_id])
   transactions    crypto_transaction[]
   balances        portfolio_balance[]
+  history         portfolio_history[]
 
   @@unique([user_id, name])
   @@index([user_id])
@@ -154,4 +170,42 @@ model portfolio_balance {
 
   @@unique([portfolio_id, coin_ticker])
   @@index([portfolio_id])
+}
+
+// Таблица для хранения метаданных криптовалют
+model crypto_metadata {
+  id              Int       @id @default(autoincrement())
+  coin_id         String    @unique // bitcoin, ethereum и т.д.
+  symbol          String    // BTC, ETH и т.д.
+  name            String    // Bitcoin, Ethereum и т.д.
+  logo            String?   // URL логотипа
+  market_cap_rank Int?
+  current_price   Float?
+  price_change_24h Float?
+  ath             Float?
+  ath_date        DateTime?
+  last_updated    DateTime  @default(now())
+
+  @@index([symbol])
+}
+
+// Таблица для хранения истории стоимости портфелей
+model portfolio_history {
+  id            Int      @id @default(autoincrement())
+  portfolio_id  Int
+  total_value   Float
+  timestamp     DateTime @default(now())
+  period        Period   // Enum с периодами
+  
+  portfolio     user_portfolio @relation(fields: [portfolio_id], references: [id])
+
+  @@unique([portfolio_id, period, timestamp])
+  @@index([portfolio_id, timestamp])
+}
+
+enum Period {
+  MINUTE_15  // Каждые 15 минут
+  HOUR_1     // Каждый час
+  HOUR_4     // Каждые 4 часа
+  HOUR_24    // Каждые 24 часа
 }

@@ -69,7 +69,7 @@ export function AddTransactionDialog({ open, onOpenChange, selectedPortfolioId }
     loadPortfolios()
   }, [user?.id])
 
-  const [transactionType, setTransactionType] = useState('buy')
+  const [transactionType, setTransactionType] = useState<'buy' | 'sell' | 'transfer'>('buy')
   const [portfolio, setPortfolio] = useState<string>('')
   const [sourcePortfolio, setSourcePortfolio] = useState<string>('')
   const [targetPortfolio, setTargetPortfolio] = useState<string>('')
@@ -105,7 +105,7 @@ export function AddTransactionDialog({ open, onOpenChange, selectedPortfolioId }
     setPortfolio(selectedPortfolioId)
   }, [selectedPortfolioId])
 
-  const handleTransactionTypeChange = (type: string) => {
+  const handleTransactionTypeChange = (type: 'buy' | 'sell' | 'transfer') => {
     setTransactionType(type)
     setSelectedAssets([])
   }
@@ -152,7 +152,11 @@ export function AddTransactionDialog({ open, onOpenChange, selectedPortfolioId }
     checkFunds()
   }, [amount, price, paymentMethod, portfolio, selectedCoin, transactionType])
 
-  const transactionTypes = [
+  const transactionTypes: Array<{
+    type: 'buy' | 'sell' | 'transfer'
+    label: string
+    color: string
+  }> = [
     { type: 'buy', label: 'Buy', color: 'green' },
     { type: 'sell', label: 'Sell', color: 'red' },
     { type: 'transfer', label: 'Transfer', color: 'blue' }
@@ -260,6 +264,56 @@ export function AddTransactionDialog({ open, onOpenChange, selectedPortfolioId }
     setInsufficientFunds(false);
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!user?.id || !portfolio || !selectedCoin || !amount || !price) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+
+    const selectedCoinData = coins.find(c => c.value === selectedCoin)
+    if (!selectedCoinData) {
+      toast.error('Invalid coin selected')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          portfolioId: Number(portfolio),
+          userId: user.id,
+          type: transactionType.toUpperCase(),
+          coinName: selectedCoinData.label,
+          coinTicker: selectedCoinData.value,
+          amount: Number(amount),
+          paymentMethod,
+          paymentPrice: Number(price),
+          paymentTotal: Number(amount) * Number(price),
+          priceUsd: Number(price), // Предполагая, что цена в USD
+          totalUsd: Number(amount) * Number(price),
+          transactionTime: date ? new Date(date) : undefined,
+          targetPortfolioId: transactionType === 'transfer' ? Number(targetPortfolio) : undefined,
+          notes: '' // Можно добавить поле для заметок в форму
+        })
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to create transaction')
+      }
+      
+      const result = await response.json()
+      toast.success('Transaction created successfully')
+      resetForm()
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Failed to create transaction:', error)
+      toast.error('Failed to create transaction')
+    }
+  }
+
   return (
     <Dialog 
       open={open} 
@@ -280,7 +334,7 @@ export function AddTransactionDialog({ open, onOpenChange, selectedPortfolioId }
             {transactionTypes.map(({ type, label, color }) => (
               <Button
                 key={type}
-                onClick={() => handleTransactionTypeChange(type)}
+                onClick={() => handleTransactionTypeChange(type as 'buy' | 'sell' | 'transfer')}
                 className={cn(
                   "flex-1 text-white border-2 text-xs sm:text-sm py-1 px-2",
                   type === 'buy' && transactionType === type ? "bg-green-600 border-green-400 hover:bg-green-700" :

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowUp, Plus, Loader2, Pencil } from 'lucide-react'
 import { Button } from "@/components/ui/button"
@@ -10,10 +10,12 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Line, LineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Sector, ReferenceLine } from "recharts"
 import { AddTransactionDialog } from "./Add-Transaction"
 import { useUser } from "@clerk/nextjs"
-import { Portfolio, Asset, isDemoPortfolio } from '@/src/types/portfolio.types'
+import { Portfolio, Asset, isDemoPortfolio, PortfolioBalancesResponse, PortfolioBalance, Period } from '@/src/types/portfolio.types'
 import { PortfolioSelector } from './PortfolioSelector'
 import { getUserPortfolios, getPortfolioBalances } from '@/utils/actions/portfolio-actions'
 import { initialAssets, portfolioChartData as portfolioData, FakePortfolio } from '@/app/data/fakePortfolio'
+import { portfolioService } from '@/src/services/portfolio'
+import { marketService } from '@/src/services/market'
 
 
 // Выноси логику загруз данных в отдельный хук
@@ -49,10 +51,11 @@ function useAssetsData(selectedPortfolio: Portfolio | null) {
           }
         } else {
           console.log('Loading real portfolio data for ID:', selectedPortfolio.id)
-          const balances = await getPortfolioBalances(selectedPortfolio.id.toString())
+          const response = await fetch(`/api/portfolio/${selectedPortfolio.id}/balance`)
+          const { balances, isEmpty } = await response.json()
           console.log('Received balances:', balances)
           
-          if (balances.isEmpty) {
+          if (isEmpty) {
             if (mounted) {
               setData({
                 assets: [],
@@ -64,24 +67,24 @@ function useAssetsData(selectedPortfolio: Portfolio | null) {
             return
           }
 
-          const assets = balances.balances.map(balance => ({
-            name: balance.coin_ticker,
-            symbol: balance.coin_ticker,
-            logo: '',
-            amount: balance.amount,
-            borrowed: balance.borrowed,
-            in_collateral: balance.in_collateral,
-            price: 0,
-            change24h: 0,
-            change7d: 0,
-            value: balance.amount,
-            profit: 0,
-            percentage: 0,
-            color: '#' + Math.floor(Math.random()*16777215).toString(16),
-            last_updated: balance.last_updated
+          const assets = await Promise.all((balances as PortfolioBalance[]).map(async (balance: PortfolioBalance) => {
+            const response = await fetch(`/api/market/metadata/${balance.coin_ticker}`)
+            const metadata = await response.json()
+            return {
+              name: metadata?.name || balance.coin_ticker,
+              symbol: balance.coin_ticker,
+              logo: metadata?.logo || '',
+              amount: balance.amount,
+              price: metadata?.current_price || 0,
+              change24h: metadata?.price_change_24h || 0,
+              change7d: 0,
+              value: balance.amount * (metadata?.current_price || 0),
+              profit: 0,
+              percentage: 0,
+              color: '#' + Math.floor(Math.random()*16777215).toString(16)
+            } as Asset
           }))
 
-          // Рассчитываем процентные доли после создания всех активов
           const totalValue = assets.reduce((sum, asset) => sum + asset.value, 0)
           assets.forEach(asset => {
             asset.percentage = totalValue > 0 ? (asset.value / totalValue * 100) : 0
@@ -97,14 +100,12 @@ function useAssetsData(selectedPortfolio: Portfolio | null) {
           }
         }
       } catch (error) {
-        console.error('Error in loadData:', error)
+        console.error('Failed to load portfolio data:', error)
       }
     }
 
     loadData()
-    return () => {
-      mounted = false
-    }
+    return () => { mounted = false }
   }, [selectedPortfolio])
 
   return data
@@ -233,6 +234,7 @@ export function MainContent() {
   const [timeRange, setTimeRange] = useState<TimeRangeType>('24H')
   const [chartData, setChartData] = useState(portfolioData)
   const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
   
   const assetsData = useAssetsData(selectedPortfolio)
   const currentSelectedAsset = selectedAsset || assetsData?.selectedAsset
@@ -275,24 +277,70 @@ export function MainContent() {
     }
   }, [portfolios])
 
-  const handlePortfolioChange = (portfolio: Portfolio) => {
-    console.log('Portfolio change triggered:', portfolio)
-    const foundPortfolio = portfolios.find((p: Portfolio) => 
-      p.id.toString() === portfolio.id.toString()
-    )
-    console.log('Found portfolio:', foundPortfolio)
+  const handlePortfolioChange = async (portfolio: Portfolio) => {
+    setIsLoading(true)
+    setError(null)
     
-    if (!foundPortfolio) {
-      console.error('Portfolio not found:', portfolio.id)
-      return
+    try {
+      if (isDemoPortfolio(portfolio)) {
+        setSelectedPortfolio(portfolio)
+        setSelectedPortfolioId(portfolio.id.toString())
+        setChartData(generateDataForTimeRange(timeRange))
+        return
+      }
+
+      setSelectedPortfolio(portfolio)
+      setSelectedPortfolioId(portfolio.id.toString())
+      await loadPortfolioChartData(portfolio.id, timeRange)
+      
+    } catch (error) {
+      console.error('Portfolio fetch failed:', error)
+      setError(error instanceof Error ? error.message : 'Failed to load portfolio')
+      
+      if (portfolios.length > 0) {
+        const demoPortfolio = portfolios.find(p => isDemoPortfolio(p))
+        if (demoPortfolio) {
+          setSelectedPortfolio(demoPortfolio)
+          setSelectedPortfolioId(demoPortfolio.id.toString())
+          setChartData(generateDataForTimeRange(timeRange))
+        }
+      }
+    } finally {
+      setIsLoading(false)
     }
-    
-    setSelectedPortfolio(foundPortfolio)
-    setSelectedPortfolioId(foundPortfolio.id.toString())
-    
-    if (isDemoPortfolio(foundPortfolio)) {
-      setChartData(portfolioData)
-    } else {
+  }
+
+  const loadPortfolioChartData = async (portfolioId: string | number, range: TimeRangeType) => {
+    try {
+      let period: Period
+      switch(range) {
+        case '24H':
+          period = Period.HOUR_24
+          break
+        case '1W':
+        case '1M':
+        case '3M':
+        case '6M':
+        case '1Y':
+          period = Period.HOUR_24
+          break
+        default:
+          period = Period.HOUR_24
+      }
+      
+      const response = await fetch(`/api/portfolio/${portfolioId}/history?period=${period}`)
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to fetch chart data')
+      }
+      const data = await response.json()
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid data format received')
+      }
+      setChartData(data)
+    } catch (error) {
+      console.error('Failed to load portfolio chart data:', error)
+      setError(error instanceof Error ? error.message : 'Failed to load chart data')
       setChartData([])
     }
   }
@@ -314,10 +362,21 @@ export function MainContent() {
     getDateFormatter(timeRange)
   , [timeRange])
 
-  // 3. Все useEffect хуки
+  // Сздаем мемоизированную функцию для загрузки данных
+  const loadChartData = useCallback((portfolio: Portfolio, range: TimeRangeType) => {
+    if (isDemoPortfolio(portfolio)) {
+      setChartData(generateDataForTimeRange(range))
+    } else {
+      loadPortfolioChartData(portfolio.id, range)
+    }
+  }, [])
+
+  // Обновляем useEffect с правильными зависимостями
   useEffect(() => {
-    setChartData(generateDataForTimeRange(timeRange))
-  }, [timeRange])
+    if (selectedPortfolio) {
+      loadChartData(selectedPortfolio, timeRange)
+    }
+  }, [timeRange, selectedPortfolio, loadChartData])
 
   if (error) {
     return (

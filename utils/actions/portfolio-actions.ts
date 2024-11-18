@@ -9,10 +9,6 @@ const getSupabaseClient = async () => {
   const supabaseKey = process.env.SUPABASE_SERVICE_KEY
   
   if (!supabaseUrl || !supabaseKey) {
-    console.error('Missing env vars:', { 
-      hasUrl: !!supabaseUrl, 
-      hasKey: !!supabaseKey 
-    })
     throw new Error('Supabase configuration is missing')
   }
 
@@ -187,6 +183,7 @@ export async function getPortfolioBalances(portfolioId: string) {
       .from("portfolio_balance")
       .select(`
         id,
+        portfolio_id,
         coin_ticker,
         amount,
         borrowed,

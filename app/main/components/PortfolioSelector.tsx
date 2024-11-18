@@ -56,31 +56,41 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
   const handleUpdateName = async () => {
     if (!selectedPortfolio?.id || !newName) return
     try {
-      await updatePortfolioName(selectedPortfolio.id.toString(), newName)
+      const response = await fetch(`/api/portfolio/${selectedPortfolio.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName })
+      })
+      
+      if (!response.ok) throw new Error('Failed to update portfolio name')
+      
       setPortfolios(portfolios.map(p => 
         p.id === selectedPortfolio.id ? { ...p, name: newName } : p
       ))
       setIsEditNameOpen(false)
     } catch (error) {
       console.error('Failed to update portfolio name:', error)
+      toast.error('Failed to update portfolio name')
     }
   }
 
   const handleCreatePortfolio = async () => {
-    if (newPortfolioName.length > 16) {
-      toast.error("Portfolio name cannot exceed 16 characters");
-      return;
-    }
     if (!user?.id || !newPortfolioName) return
-
     try {
-      const newPortfolio = await createPortfolio(
-        user.id,
-        newPortfolioName,
-        portfolioType,
-        portfolioDescription || undefined
-      )
-
+      const response = await fetch('/api/portfolio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          name: newPortfolioName,
+          type: portfolioType,
+          description: portfolioDescription
+        })
+      })
+      
+      if (!response.ok) throw new Error('Failed to create portfolio')
+      const newPortfolio = await response.json()
+      
       setPortfolios(prev => {
         const withoutFake = prev.filter(p => p.id !== 'fake-portfolio')
         return [FakePortfolio, ...withoutFake, newPortfolio]
