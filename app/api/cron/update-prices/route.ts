@@ -1,10 +1,22 @@
 import { NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 import { marketService } from '@/src/services/market'
 import { portfolioService } from '@/src/services/portfolio'
 import { Period } from '@/src/types/portfolio.types'
 
 export async function GET() {
   try {
+    // Проверка авторизации для cron-job
+    const headersList = await headers()
+    const authToken = headersList.get('authorization')
+    
+    if (authToken !== process.env.CRON_SECRET) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     // Обновляем рыночные данные
     await marketService.updateCryptoMetadata()
     
@@ -12,56 +24,68 @@ export async function GET() {
     const portfolios = await portfolioService.getAllActivePortfolios()
     
     for (const portfolio of portfolios) {
-      const { balances, isEmpty } = await portfolioService.getPortfolioBalances(portfolio.id.toString())
-      
-      if (!isEmpty) {
-        let totalValue = 0
-        for (const balance of balances) {
-          const currentPrice = await marketService.getCurrentPrice(balance.coin_ticker)
-          totalValue += balance.amount * currentPrice
-        }
+      try {
+        const { balances, isEmpty } = await portfolioService.getPortfolioBalances(portfolio.id.toString())
+        
+        if (!isEmpty) {
+          let totalValue = 0
+          for (const balance of balances) {
+            const currentPrice = await marketService.getCurrentPrice(balance.coin_ticker)
+            totalValue += balance.amount * currentPrice
+          }
 
-        const currentMinute = new Date().getMinutes()
-        
-        // Сохраняем 15-минутные данные
-        if (currentMinute % 15 === 0) {
-          await portfolioService.savePortfolioHistory({
-            portfolioId: portfolio.id,
-            totalValue,
-            period: Period.MINUTE_15
-          })
+          const now = new Date()
+          const currentMinute = now.getMinutes()
+          const currentHour = now.getHours()
+          
+          // Сохраняем 15-минутные данные
+          if (currentMinute % 15 === 0) {
+            await portfolioService.savePortfolioHistory({
+              portfolioId: portfolio.id,
+              totalValue,
+              period: Period.MINUTE_15
+            })
+          }
+          
+          // Сохраняем часовые данные
+          if (currentMinute === 0) {
+            await portfolioService.savePortfolioHistory({
+              portfolioId: portfolio.id,
+              totalValue,
+              period: Period.HOUR_1
+            })
+          }
+          
+          // Сохраняем 4-часовые данные
+          if (currentMinute === 0 && currentHour % 4 === 0) {
+            await portfolioService.savePortfolioHistory({
+              portfolioId: portfolio.id,
+              totalValue,
+              period: Period.HOUR_4
+            })
+          }
+          
+          // Сохраняем дневные данные
+          if (currentMinute === 0 && currentHour === 0) {
+            await portfolioService.savePortfolioHistory({
+              portfolioId: portfolio.id,
+              totalValue,
+              period: Period.HOUR_24
+            })
+          }
         }
-        
-        // Сохраняем часовые данные
-        if (currentMinute === 0) {
-          await portfolioService.savePortfolioHistory({
-            portfolioId: portfolio.id,
-            totalValue,
-            period: Period.HOUR_1
-          })
-        }
-        
-        // Сохраняем 4-часовые данные
-        if (currentMinute === 0 && new Date().getHours() % 4 === 0) {
-          await portfolioService.savePortfolioHistory({
-            portfolioId: portfolio.id,
-            totalValue,
-            period: Period.HOUR_4
-          })
-        }
-        
-        // Сохраняем дневные данные
-        if (currentMinute === 0 && new Date().getHours() === 0) {
-          await portfolioService.savePortfolioHistory({
-            portfolioId: portfolio.id,
-            totalValue,
-            period: Period.HOUR_24
-          })
-        }
+      } catch (error) {
+        console.error(`Failed to update portfolio ${portfolio.id}:`, error)
+        // Продолжаем с следующим портфолио
+        continue
       }
     }
     
-    return NextResponse.json({ success: true })
+    console.log(`Successfully updated ${portfolios.length} portfolios`)
+    return NextResponse.json({ 
+      success: true,
+      updatedPortfolios: portfolios.length 
+    })
   } catch (error: any) {
     console.error('Cron job failed:', error)
     return NextResponse.json(
