@@ -5,17 +5,23 @@ import { portfolioService } from '@/src/services/portfolio'
 import { Period } from '@/src/types/portfolio.types'
 
 export async function GET(request: NextRequest) {
-  console.log('Starting update-prices cron job:', new Date().toISOString());
-  console.log('Auth header:', request.headers.get('Authorization'));
-  console.log('Expected auth:', `Bearer ${process.env.CRON_SECRET}`);
+  const authHeader = request.headers.get('Authorization')
+  const expectedAuth = `Bearer ${process.env.CRON_SECRET}`
   
-  try {
-    const authHeader = request.headers.get('Authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      console.log('Unauthorized cron job attempt');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  console.log('Auth check:', {
+    received: authHeader,
+    expected: expectedAuth,
+    isMatch: authHeader === expectedAuth
+  })
 
+  if (authHeader !== expectedAuth) {
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    )
+  }
+
+  try {
     // Обновляем рыночные данные
     await marketService.updateCryptoMetadata()
     
