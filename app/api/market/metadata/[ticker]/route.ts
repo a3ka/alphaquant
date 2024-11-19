@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { marketService } from '@/src/services/market'
 
-type RouteContext = {
-  params: {
-    ticker: string
-  }
+interface RouteSegment {
+  ticker: string
 }
 
 export async function GET(
   request: NextRequest,
-  { params }: RouteContext
+  { params }: { params: RouteSegment }
 ) {
   try {
     const metadata = await marketService.getCoinMetadata(params.ticker)
