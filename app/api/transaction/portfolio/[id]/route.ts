@@ -1,13 +1,12 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { transactionService } from '@/src/services/transaction'
 
 export async function GET(
-  req: Request,
-  context: { params: { id: string } }
+  request: NextRequest,
+  context: { params: any }
 ) {
   try {
-    const params = await context.params
-    const transactions = await transactionService.getPortfolioTransactions(Number(params.id))
+    const transactions = await transactionService.getPortfolioTransactions(Number(context.params.id))
     return NextResponse.json(transactions)
   } catch (error: any) {
     return NextResponse.json(

@@ -1,13 +1,13 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { transactionService } from '@/src/services/transaction'
 import type { TransactionUpdateProps } from '@/src/types/transaction.types'
 
 export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: any }
 ) {
   try {
-    const updates: TransactionUpdateProps = await req.json()
+    const updates: TransactionUpdateProps = await request.json()
     
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(
@@ -16,7 +16,7 @@ export async function PUT(
       )
     }
 
-    await transactionService.updateTransaction(Number(params.id), updates)
+    await transactionService.updateTransaction(Number(context.params.id), updates)
     return NextResponse.json({ success: true })
   } catch (error: any) {
     return NextResponse.json(
@@ -27,11 +27,11 @@ export async function PUT(
 }
 
 export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: any }
 ) {
   try {
-    await transactionService.deleteTransaction(Number(params.id))
+    await transactionService.deleteTransaction(Number(context.params.id))
     return NextResponse.json({ success: true })
   } catch (error: any) {
     return NextResponse.json(
@@ -42,11 +42,11 @@ export async function DELETE(
 }
 
 export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: any }
 ) {
   try {
-    const transaction = await transactionService.getTransaction(Number(params.id))
+    const transaction = await transactionService.getTransaction(Number(context.params.id))
     if (!transaction) {
       return NextResponse.json(
         { error: 'Transaction not found' },
