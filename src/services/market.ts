@@ -54,14 +54,12 @@ export const marketService = {
       
       const { data, error } = await supabase
         .from('crypto_metadata')
-        .select('current_price, updated_at')
+        .select('current_price')
         .eq('symbol', ticker.toUpperCase())
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .single()
+        .maybeSingle()
 
       if (error) {
-        console.warn(`Price fetch error for ${ticker}:`, error)
+        console.warn(`Failed to get price for ${ticker}:`, error)
         return 0
       }
       
