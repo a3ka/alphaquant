@@ -68,19 +68,24 @@ export const marketService = {
 
   async getCoinMetadata(ticker: string) {
     try {
-      const supabase = await createServerSupabaseClient()
+      const supabase = await createServerSupabaseClient();
       
       const { data, error } = await supabase
         .from('crypto_metadata')
         .select('*')
         .eq('symbol', ticker.toUpperCase())
-        .single()
-
-      if (error) throw error
-      return data
+        .single(); // Возвращает только одну строку или вызывает ошибку
+  
+      // Если ошибка или данных нет
+      if (error || !data) {
+        console.warn(`No metadata found for ticker: ${ticker}`);
+        return null;
+      }
+  
+      return data;
     } catch (error) {
-      console.error('Failed to get coin metadata:', error)
-      return null
+      console.error('Failed to get coin metadata:', error);
+      return null;
     }
   }
 }
