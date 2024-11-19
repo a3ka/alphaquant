@@ -2,11 +2,17 @@
   "crons": [
     {
       "path": "/api/cron/update-prices",
-      "schedule": "0 0 * * *"
+      "schedule": "0 0 * * *",
+      "headers": {
+        "Authorization": "Bearer @CRON_SECRET"
+      }
     },
     {
       "path": "/api/cron/cleanup",
-      "schedule": "0 0 * * *"
+      "schedule": "0 0 * * *",
+      "headers": {
+        "Authorization": "Bearer @CRON_SECRET"
+      }
     }
   ]
 }
