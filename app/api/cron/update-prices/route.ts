@@ -5,16 +5,12 @@ import { portfolioService } from '@/src/services/portfolio'
 import { Period } from '@/src/types/portfolio.types'
 
 export async function GET(request: NextRequest) {
+  console.log('Starting update-prices cron job:', new Date().toISOString());
   try {
-    // Проверка авторизации для cron-job
-    const headersList = await headers()
-    const authToken = headersList.get('authorization')
-    
-    if (authToken !== process.env.CRON_SECRET) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    const authHeader = request.headers.get('Authorization');
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      console.log('Unauthorized cron job attempt');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Обновляем рыночные данные

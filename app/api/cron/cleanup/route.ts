@@ -3,16 +3,12 @@ import { headers } from 'next/headers'
 import { portfolioService } from '@/src/services/portfolio'
 
 export async function GET(request: NextRequest) {
+  console.log('Starting cleanup cron job:', new Date().toISOString());
   try {
-    // Проверка авторизации для cron-job
-    const headersList = await headers()
-    const authToken = headersList.get('authorization')
-    
-    if (authToken !== process.env.CRON_SECRET) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    const authHeader = request.headers.get('Authorization');
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      console.log('Unauthorized cleanup attempt');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await portfolioService.cleanupOldHistory()
@@ -22,9 +18,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Cleanup job failed:', error)
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
