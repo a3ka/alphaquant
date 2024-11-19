@@ -24,14 +24,15 @@ export async function GET(
 }
 
 export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: any }
 ) {
   try {
-    const updates = await req.json()
-    await userService.updateUser(params.id, updates)
+    const updates = await request.json()
+    await userService.updateUser(context.params.id, updates)
     return NextResponse.json({ success: true })
   } catch (error: any) {
+    console.error('Error updating user:', error)
     return NextResponse.json(
       { error: error.message },
       { status: 500 }
@@ -40,13 +41,14 @@ export async function PUT(
 }
 
 export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: any }
 ) {
   try {
-    await userService.deleteUser(params.id)
+    await userService.deleteUser(context.params.id)
     return NextResponse.json({ success: true })
   } catch (error: any) {
+    console.error('Error deleting user:', error)
     return NextResponse.json(
       { error: error.message },
       { status: 500 }
