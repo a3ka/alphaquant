@@ -3,10 +3,27 @@ import { portfolioService } from '../../../../../src/services/portfolio'
 
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
-    const balances = await portfolioService.getPortfolioBalances(context.params.id)
+    console.log('Context object:', context)
+    console.log('Raw params object:', context.params)
+
+    const params = await context.params
+    console.log('Resolved params:', params)
+
+    const id = params?.id
+    console.log('Resolved id:', id)
+
+    if (!id) {
+      console.error('Portfolio ID is missing')
+      return NextResponse.json(
+        { error: 'Portfolio ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const balances = await portfolioService.getPortfolioBalances(id)
     return NextResponse.json({
       balances: balances.balances || [],
       isEmpty: balances.isEmpty
@@ -22,9 +39,19 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
+    const params = await context.params
+    const id = params?.id
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Portfolio ID is required' },
+        { status: 400 }
+      )
+    }
+
     const { coinTicker, amount, isMargin } = await request.json()
     
     if (!coinTicker || amount === undefined) {
@@ -35,7 +62,7 @@ export async function PUT(
     }
 
     await portfolioService.updatePortfolioBalance(
-      parseInt(context.params.id),
+      parseInt(id),
       coinTicker,
       amount,
       isMargin || false
