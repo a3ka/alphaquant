@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { marketService } from '@/src/services/market';
 
-export async function GET(request: NextRequest, context: { params: { ticker: string } }) {
+export async function GET(
+  request: NextRequest,
+  context: { params: Record<string, string | undefined> }
+) {
   try {
     // Дожидаемся `params`, если они асинхронны
     const { ticker } = await context.params;
