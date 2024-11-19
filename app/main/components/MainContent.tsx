@@ -18,6 +18,7 @@ import { portfolioService } from '@/src/services/portfolio'
 import { marketService } from '@/src/services/market'
 
 
+
 // Выноси логику загруз данных в отдельный хук
 function useAssetsData(selectedPortfolio: Portfolio | null) {
   const [data, setData] = useState<{

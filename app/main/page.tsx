@@ -6,10 +6,12 @@ import { LeftSidebar } from "./components/LeftSidebar";
 import { MainContent } from "./components/MainContent";
 import { RightSidebar } from "./components/RightSidebar";
 import { UserProfile } from '@/components/user-profile';
+import { Analytics } from "@vercel/analytics/react"
 
 export default function CryptoDashboard() {
   return (
     <TooltipProvider>
+      <Analytics />
       <div className="min-h-screen bg-[#010714] text-[#E5E7EB] px-2">
         <Header />
         <div className="flex justify-between items-center p-4">
