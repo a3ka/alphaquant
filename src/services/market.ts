@@ -77,9 +77,13 @@ export const marketService = {
         .single(); // Возвращает только одну строку или вызывает ошибку
   
       // Если ошибка или данных нет
-      if (error || !data) {
-        console.warn(`No metadata found for ticker: ${ticker}`);
-        return null;
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // Логируем отсутствие данных
+          console.warn(`No metadata found for ticker: ${ticker}`);
+          return null;
+        }
+        throw error;
       }
   
       return data;

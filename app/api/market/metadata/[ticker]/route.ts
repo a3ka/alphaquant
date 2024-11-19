@@ -31,3 +31,6 @@ export async function GET(request: NextRequest, context: { params: { ticker: str
     );
   }
 }
+
+// Используем Node.js Runtime
+export const runtime = 'nodejs';
