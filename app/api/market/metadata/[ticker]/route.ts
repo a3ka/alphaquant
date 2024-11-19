@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { marketService } from '@/src/services/market'
 
-type Props = {
-  params: {
-    ticker: string
-  }
-}
-
 export async function GET(
   request: NextRequest,
-  { params }: Props
+  { params }: { params: { ticker: string } }
 ) {
   try {
     const metadata = await marketService.getCoinMetadata(params.ticker)

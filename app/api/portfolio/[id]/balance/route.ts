@@ -23,13 +23,10 @@ export async function GET(
 }
 
 export async function PUT(
-  request: Request,
-  context: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const params = await context.params
-    const id = await params.id
-    
     const { coinTicker, amount, isMargin } = await request.json()
     
     if (!coinTicker || amount === undefined) {
@@ -40,7 +37,7 @@ export async function PUT(
     }
 
     await portfolioService.updatePortfolioBalance(
-      parseInt(id),
+      parseInt(params.id),
       coinTicker,
       amount,
       isMargin || false
