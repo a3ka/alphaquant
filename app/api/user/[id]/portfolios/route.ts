@@ -1,13 +1,12 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { portfolioService } from '@/src/services/portfolio'
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: Promise<string> } }
+  request: NextRequest,
+  context: { params: any }
 ) {
-  const id = await params.id
   try {
-    const portfolios = await portfolioService.getUserPortfolios(id)
+    const portfolios = await portfolioService.getUserPortfolios(context.params.id)
     return NextResponse.json(portfolios)
   } catch (error: any) {
     return NextResponse.json(
