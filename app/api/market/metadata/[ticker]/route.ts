@@ -3,17 +3,17 @@ import { marketService } from '@/src/services/market';
 
 export async function GET(
   request: NextRequest,
-  context: { params: Record<string, string | undefined> }
+  context: { params: any } // Убираем строгую типизацию для Vercel
 ) {
   try {
-    console.log('Context object:', context); // Логирование всего объекта context
-    console.log('Raw params object:', context.params); // Логирование params до await
+    console.log('Context object:', context); // Логируем объект context
+    console.log('Raw params object:', context.params); // Логируем params до await
 
-    // Дожидаемся `params`, если они асинхронны
-    const { ticker } = await context.params;
+    const params = await context.params; // Явно ожидаем асинхронное разрешение
+    console.log('Resolved params:', params); // Логируем распакованные параметры
 
-    console.log('Resolved params:', context.params); // Логирование params после await
-    console.log('Resolved ticker:', ticker); // Логирование значения ticker
+    const ticker = params?.ticker;
+    console.log('Resolved ticker:', ticker); // Логируем значение ticker
 
     if (!ticker) {
       console.error('Ticker parameter is missing');
@@ -44,6 +44,3 @@ export async function GET(
     );
   }
 }
-
-// Используем Node.js Runtime
-export const runtime = 'nodejs';
