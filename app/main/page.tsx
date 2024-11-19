@@ -8,6 +8,7 @@ import { RightSidebar } from "./components/RightSidebar";
 import { UserProfile } from '@/components/user-profile';
 import { Analytics } from "@vercel/analytics/react"
 
+
 export default function CryptoDashboard() {
   return (
     <TooltipProvider>

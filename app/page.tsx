@@ -12,6 +12,7 @@ import ParticleBackground from '@/components/ParticleBackground'
 import SignalFlowVisualization from '@/components/SignalFlowVisualization'
 import Navbar from '@/components/Navbar'
 
+
 export default function LandingPage() {
   const [isMobile, setIsMobile] = useState(false)
 
