@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { marketService } from '@/src/services/market'
 
+type RouteContext = {
+  params: {
+    ticker: string
+  }
+}
+
 export async function GET(
   request: NextRequest,
-  context: { params: { ticker: string } }
+  { params }: RouteContext
 ) {
   try {
-    const metadata = await marketService.getCoinMetadata(context.params.ticker)
+    const metadata = await marketService.getCoinMetadata(params.ticker)
     return NextResponse.json(metadata)
   } catch (error: any) {
     return NextResponse.json(
