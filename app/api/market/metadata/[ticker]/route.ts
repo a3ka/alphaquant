@@ -3,7 +3,7 @@ import { marketService } from '@/src/services/market'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Record<'ticker', string> }
+  { params }: { params: { ticker: string } }
 ) {
   try {
     const metadata = await marketService.getCoinMetadata(params.ticker)
