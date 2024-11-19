@@ -1,3 +1,4 @@
+import { stablecoinsMetadata } from '@/app/data/fakePortfolio'
 import { createServerSupabaseClient } from './supabase/server'
 
 interface CoinMarketData {
@@ -79,25 +80,29 @@ export const marketService = {
   },
 
   async getCoinMetadata(ticker: string) {
+    // Проверяем стейблкоины
+    const upperTicker = ticker.toUpperCase();
+    if (upperTicker === 'USDT' || upperTicker === 'USDC') {
+      return stablecoinsMetadata[upperTicker];
+    }
+
     try {
       const supabase = await createServerSupabaseClient();
       
       const { data, error } = await supabase
         .from('crypto_metadata')
         .select('*')
-        .eq('symbol', ticker.toUpperCase())
-        .single(); // Возвращает только одну строку или вызывает ошибку
-  
-      // Если ошибка или данных нет
+        .eq('symbol', upperTicker)
+        .single();
+
       if (error) {
         if (error.code === 'PGRST116') {
-          // Логируем отсутствие данных
           console.warn(`No metadata found for ticker: ${ticker}`);
           return null;
         }
         throw error;
       }
-  
+
       return data;
     } catch (error) {
       console.error('Failed to get coin metadata:', error);

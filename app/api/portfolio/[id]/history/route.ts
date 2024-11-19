@@ -7,8 +7,10 @@ export async function GET(
   context: { params: any }
 ) {
   try {
-    const { searchParams } = new URL(request.url)
-    const period = searchParams.get('period')
+    const params = await context.params
+    const id = params.id
+    const searchParams = request.nextUrl.searchParams
+    const period = searchParams.get('period') as Period
     const days = parseInt(searchParams.get('days') || '7')
     
     if (!period || !Object.values(Period).includes(period as Period)) {
@@ -22,7 +24,7 @@ export async function GET(
     startDate.setDate(startDate.getDate() - days)
     
     const history = await portfolioService.getPortfolioHistory(
-      parseInt(context.params.id),
+      parseInt(id),
       period as Period,
       startDate
     )

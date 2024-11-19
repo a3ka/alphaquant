@@ -1,11 +1,12 @@
 import { createServerSupabaseClient } from './supabase/server'
-import type { 
+import { 
   Transaction, 
   TransactionType, 
   TransactionCreateProps, 
   TransactionUpdateProps,
   TransactionWithPortfolio 
 } from '@/src/types/transaction.types'
+import { portfolioService } from '@/src/services/portfolio'
 
 export const transactionService = {
   async createTransaction(data: TransactionCreateProps) {
@@ -36,6 +37,49 @@ export const transactionService = {
         .single()
 
       if (error) throw error
+
+      let amountChange = 0
+      const isMargin = data.type.includes('MARGIN')
+
+      switch (data.type) {
+        case 'BUY':
+        case 'MARGIN_BUY':
+          amountChange = data.amount
+          break
+        case 'SELL':
+        case 'MARGIN_SELL':
+          amountChange = -data.amount
+          break
+        case 'TRANSFER':
+          await portfolioService.updatePortfolioBalance(
+            data.portfolioId,
+            data.coinTicker,
+            -data.amount,
+            false
+          )
+          if (data.targetPortfolioId) {
+            await portfolioService.updatePortfolioBalance(
+              data.targetPortfolioId,
+              data.coinTicker,
+              data.amount,
+              false
+            )
+            await portfolioService.updatePortfolioData(data.targetPortfolioId)
+          }
+          break
+      }
+
+      if (data.type !== 'TRANSFER') {
+        await portfolioService.updatePortfolioBalance(
+          data.portfolioId,
+          data.coinTicker,
+          amountChange,
+          isMargin
+        )
+      }
+
+      await portfolioService.updatePortfolioData(data.portfolioId)
+
       return transaction
     } catch (error: any) {
       console.error('Failed to create transaction:', error)

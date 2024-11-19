@@ -165,3 +165,30 @@ export const FakePortfolio: DemoPortfolio = {
     profitPercentage: 1.75
   }
 } 
+
+export const stablecoinsMetadata = {
+  USDT: {
+    coin_id: 'tether',
+    symbol: 'USDT',
+    name: 'Tether',
+    logo: 'https://assets.coingecko.com/coins/images/325/standard/Tether.png?1696501661',
+    market_cap_rank: 3,
+    current_price: 1,
+    price_change_24h: 0,
+    ath: 1,
+    ath_date: '2023-01-01T00:00:00.000Z',
+    last_updated: new Date().toISOString()
+  },
+  USDC: {
+    coin_id: 'usd-coin',
+    symbol: 'USDC',
+    name: 'USD Coin',
+    logo: 'https://assets.coingecko.com/coins/images/6319/standard/usdc.png?1696506694',
+    market_cap_rank: 5,
+    current_price: 1,
+    price_change_24h: 0,
+    ath: 1,
+    ath_date: '2023-01-01T00:00:00.000Z',
+    last_updated: new Date().toISOString()
+  }
+} 

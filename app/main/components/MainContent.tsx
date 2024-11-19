@@ -69,21 +69,41 @@ function useAssetsData(selectedPortfolio: Portfolio | null) {
           }
 
           const assets = await Promise.all((balances as PortfolioBalance[]).map(async (balance: PortfolioBalance) => {
-            const response = await fetch(`/api/market/metadata/${balance.coin_ticker}`)
-            const metadata = await response.json()
-            return {
-              name: metadata?.name || balance.coin_ticker,
-              symbol: balance.coin_ticker,
-              logo: metadata?.logo || '',
-              amount: balance.amount,
-              price: metadata?.current_price || 0,
-              change24h: metadata?.price_change_24h || 0,
-              change7d: 0,
-              value: balance.amount * (metadata?.current_price || 0),
-              profit: 0,
-              percentage: 0,
-              color: '#' + Math.floor(Math.random()*16777215).toString(16)
-            } as Asset
+            try {
+              const response = await fetch(`/api/market/metadata/${balance.coin_ticker}`)
+              const metadata = await response.json()
+              
+              // Используем дефолтные значения, если метаданных нет
+              return {
+                name: metadata?.name || balance.coin_ticker,
+                symbol: balance.coin_ticker,
+                logo: metadata?.logo || '/images/default-coin.png',
+                amount: balance.amount,
+                price: metadata?.current_price || 1, // для стейблкоинов используем 1
+                change24h: metadata?.price_change_24h || 0,
+                change7d: 0,
+                value: balance.amount * (metadata?.current_price || 1),
+                profit: 0,
+                percentage: 0,
+                color: '#' + Math.floor(Math.random()*16777215).toString(16)
+              }
+            } catch (error) {
+              console.error(`Failed to load metadata for ${balance.coin_ticker}:`, error)
+              // Возвращаем базовый объект в случае ошибки
+              return {
+                name: balance.coin_ticker,
+                symbol: balance.coin_ticker,
+                logo: '/images/default-coin.png',
+                amount: balance.amount,
+                price: 1,
+                change24h: 0,
+                change7d: 0,
+                value: balance.amount,
+                profit: 0,
+                percentage: 0,
+                color: '#' + Math.floor(Math.random()*16777215).toString(16)
+              }
+            }
           }))
 
           const totalValue = assets.reduce((sum, asset) => sum + asset.value, 0)
