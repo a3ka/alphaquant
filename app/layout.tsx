@@ -10,7 +10,8 @@ import './globals.css'
 export const metadata: Metadata = {
   metadataBase: new URL("https://alphaquant.io"),
   title: {
-    default: 'AlphaQuant'
+    default: 'AlphaQuant',
+    template: '%s | AlphaQuant'
   },
   description: 'AlpaQuant',
   openGraph: {
