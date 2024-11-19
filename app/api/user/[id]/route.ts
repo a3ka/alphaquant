@@ -1,14 +1,21 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { userService } from '@/src/services/user'
 
 export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: any }
 ) {
   try {
-    const user = await userService.getUser(params.id)
+    const user = await userService.getUser(context.params.id)
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
     return NextResponse.json(user)
   } catch (error: any) {
+    console.error('Error in user route:', error)
     return NextResponse.json(
       { error: error.message },
       { status: 500 }
