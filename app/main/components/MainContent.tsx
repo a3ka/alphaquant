@@ -79,39 +79,26 @@ export function MainContent() {
   return (
     <main className="w-full bg-[#010714] rounded-lg border border-gray-400">
       <Card className="bg-transparent">
-        <CardContent className="p-6">          
-          {isLoading ? (
-            <div className="flex items-center justify-center h-[500px]">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            </div>
-          ) : isEmptyPortfolio ? (
-            <EmptyPortfolioState onAddTransaction={() => setIsAddTransactionOpen(true)} onPortfolioChange={handlePortfolioChange} />
-          ) : (
-            <>
-              <PortfolioCharts
-                timeRange={timeRange}
-                setTimeRange={setTimeRange}
-                portfolioData={chartData}
-                pieChartData={assetsData.pieChartData}
-                assets={assetsData.assets}
-                currentSelectedAsset={currentSelectedAsset}
-                setSelectedAsset={assetsData.setSelectedAsset}
-                portfolioRisk={portfolioRisk}
-                getRiskColor={getRiskColor}
-                formatYAxis={formatYAxis}
-                formatDate={(date) => new Date(date).toLocaleDateString()}
-                onPortfolioChange={handlePortfolioChange}
-                setIsAddTransactionOpen={setIsAddTransactionOpen}
-              />
-      
+        <CardContent className="p-6">
+          <div className="space-y-6">
+            
 
-              <PortfolioTable 
-                assets={assetsData.assets}
-                isAddTransactionOpen={isAddTransactionOpen}
-                setIsAddTransactionOpen={setIsAddTransactionOpen}
-              />
-            </>
-          )}
+            <PortfolioCharts
+              timeRange={timeRange}
+              setTimeRange={setTimeRange}
+              portfolioData={chartData}
+              pieChartData={assetsData?.pieChartData || []}
+              assets={assetsData?.assets || []}
+              currentSelectedAsset={currentSelectedAsset}
+              setSelectedAsset={assetsData?.setSelectedAsset}
+              portfolioRisk={portfolioRisk}
+              getRiskColor={getRiskColor}
+              formatYAxis={formatYAxis}
+              formatDate={(date) => new Date(date).toLocaleDateString()}
+              onPortfolioChange={handlePortfolioChange}
+              setIsAddTransactionOpen={setIsAddTransactionOpen}
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -119,11 +106,6 @@ export function MainContent() {
         open={isAddTransactionOpen}
         onOpenChange={setIsAddTransactionOpen}
         selectedPortfolioId={selectedPortfolioId}
-      />
-
-      <PortfolioSelector 
-        onPortfolioChange={handlePortfolioChange}
-        externalSelectedPortfolio={selectedPortfolio || FakePortfolio}
       />
     </main>
   )
