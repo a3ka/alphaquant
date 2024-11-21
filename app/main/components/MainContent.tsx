@@ -87,21 +87,30 @@ export function MainContent() {
           ) : isEmptyPortfolio ? (
             <EmptyPortfolioState onAddTransaction={() => setIsAddTransactionOpen(true)} onPortfolioChange={handlePortfolioChange} />
           ) : (
-            <PortfolioCharts
-              timeRange={timeRange}
-              setTimeRange={setTimeRange}
-              portfolioData={chartData}
-              pieChartData={assetsData.pieChartData}
-              assets={assetsData.assets}
-              currentSelectedAsset={currentSelectedAsset}
-              setSelectedAsset={assetsData.setSelectedAsset}
-              portfolioRisk={portfolioRisk}
-              getRiskColor={getRiskColor}
-              formatYAxis={formatYAxis}
-              formatDate={(date) => new Date(date).toLocaleDateString()}
-              onPortfolioChange={handlePortfolioChange}
-              setIsAddTransactionOpen={setIsAddTransactionOpen}
-            />
+            <>
+              <PortfolioCharts
+                timeRange={timeRange}
+                setTimeRange={setTimeRange}
+                portfolioData={chartData}
+                pieChartData={assetsData.pieChartData}
+                assets={assetsData.assets}
+                currentSelectedAsset={currentSelectedAsset}
+                setSelectedAsset={assetsData.setSelectedAsset}
+                portfolioRisk={portfolioRisk}
+                getRiskColor={getRiskColor}
+                formatYAxis={formatYAxis}
+                formatDate={(date) => new Date(date).toLocaleDateString()}
+                onPortfolioChange={handlePortfolioChange}
+                setIsAddTransactionOpen={setIsAddTransactionOpen}
+              />
+      
+
+              <PortfolioTable 
+                assets={assetsData.assets}
+                isAddTransactionOpen={isAddTransactionOpen}
+                setIsAddTransactionOpen={setIsAddTransactionOpen}
+              />
+            </>
           )}
         </CardContent>
       </Card>

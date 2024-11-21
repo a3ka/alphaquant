@@ -12,29 +12,6 @@ interface EmptyPortfolioStateProps {
   onPortfolioChange: (portfolio: Portfolio) => void
 }
 
-// export function EmptyPortfolioState({ onAddTransaction, onPortfolioChange }: EmptyPortfolioStateProps) {
-//   return (
-//     <div className="flex flex-col h-[600px]">
-//       <div className="flex items-center justify-between mb-6">
-//         <div className="text-lg font-medium text-white">Portfolio Overview</div>
-//         <PortfolioSelector onPortfolioChange={onPortfolioChange} />
-//       </div>
-      
-//       <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-//         <div className="text-lg mb-2">No data available</div>
-//         <div className="text-sm mb-4">Add transactions to see portfolio analytics</div>
-//         <Button 
-//           onClick={onAddTransaction}
-//           className="bg-blue-500 hover:bg-blue-600 text-white"
-//         >
-//           <Plus className="h-4 w-4 mr-2" />
-//           Add First Transaction
-//         </Button>
-//       </div>
-//     </div>
-//   )
-// }
-
 
 export function EmptyPortfolioState({ onAddTransaction, onPortfolioChange }: EmptyPortfolioStateProps) {
     return (
