@@ -120,6 +120,11 @@ export function MainContent() {
         onOpenChange={setIsAddTransactionOpen}
         selectedPortfolioId={selectedPortfolioId}
       />
+
+      <PortfolioSelector 
+        onPortfolioChange={handlePortfolioChange}
+        externalSelectedPortfolio={selectedPortfolio || FakePortfolio}
+      />
     </main>
   )
 }   

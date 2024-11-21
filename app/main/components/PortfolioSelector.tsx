@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Plus, Pencil, Info } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./Select"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -18,12 +18,18 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 interface PortfolioSelectorProps {
   onPortfolioChange: (portfolio: Portfolio) => void
+  externalSelectedPortfolio?: Portfolio
 }
 
-export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps) {
+export function PortfolioSelector({ 
+  onPortfolioChange,
+  externalSelectedPortfolio 
+}: PortfolioSelectorProps) {
   const { user, isLoaded, isSignedIn } = useUser()
   const [portfolios, setPortfolios] = useState<Portfolio[]>([FakePortfolio])
-  const [selectedPortfolio, setSelectedPortfolio] = useState<Portfolio>(FakePortfolio)
+  const [selectedPortfolio, setSelectedPortfolio] = useState<Portfolio>(
+    externalSelectedPortfolio || FakePortfolio
+  )
   const [isEditNameOpen, setIsEditNameOpen] = useState(false)
   const [isAddPortfolioOpen, setIsAddPortfolioOpen] = useState(false)
   const [newPortfolioName, setNewPortfolioName] = useState('')
@@ -32,6 +38,12 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
   const [error, setError] = useState<string | null>(null)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [portfolioDescription, setPortfolioDescription] = useState('')
+
+  useEffect(() => {
+    if (externalSelectedPortfolio) {
+      setSelectedPortfolio(externalSelectedPortfolio)
+    }
+  }, [externalSelectedPortfolio])
 
   useEffect(() => {
     const loadPortfolios = async () => {
@@ -64,10 +76,18 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
       
       if (!response.ok) throw new Error('Failed to update portfolio name')
       
-      setPortfolios(portfolios.map(p => 
-        p.id === selectedPortfolio.id ? { ...p, name: newName } : p
-      ))
+      const updatedPortfolio = { ...selectedPortfolio, name: newName }
+      const updatedPortfolios = portfolios.map(p => 
+        p.id === selectedPortfolio.id ? updatedPortfolio : p
+      )
+      
+      setPortfolios(updatedPortfolios)
+      setSelectedPortfolio(updatedPortfolio)
+      onPortfolioChange(updatedPortfolio)
+      
       setIsEditNameOpen(false)
+      setNewName('')
+      toast.success('Portfolio name updated successfully')
     } catch (error) {
       console.error('Failed to update portfolio name:', error)
       toast.error('Failed to update portfolio name')
@@ -144,26 +164,42 @@ export function PortfolioSelector({ onPortfolioChange }: PortfolioSelectorProps)
       setIsAddPortfolioOpen(true)
       return
     }
+    
     const portfolio = portfolios.find(p => p.id.toString() === value)
     if (!portfolio) {
       console.error('Portfolio not found:', value)
       return
     }
+    
     setSelectedPortfolio(portfolio)
     onPortfolioChange(portfolio)
+  }
+
+  const activePortfolios = useMemo(() => {
+    return portfolios.filter(p => p.is_active !== false)
+  }, [portfolios])
+
+  const handleError = (error: any, message: string) => {
+    console.error(`${message}:`, error)
+    toast.error(message)
+    setError(error.message)
   }
 
   return (
     <>
       <Select
-        value={selectedPortfolio?.id.toString() || ''}
+        value={selectedPortfolio?.id.toString()}
         onValueChange={handlePortfolioChange}
       >
         <SelectTrigger className="w-[160px] h-8 bg-[#1F2937] border-gray-800/50 text-sm text-white whitespace-nowrap overflow-hidden text-ellipsis">
-          <SelectValue placeholder="Select Portfolio" />
+          <SelectValue>
+            {selectedPortfolio?.id === 'fake-portfolio' 
+              ? 'Demo Portfolio' 
+              : selectedPortfolio?.name || 'Select Portfolio'}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          {portfolios.map((portfolio) => (
+          {activePortfolios.map((portfolio) => (
             <div key={portfolio.id} className="relative">
               <SelectItem 
                 value={portfolio.id.toString()}
