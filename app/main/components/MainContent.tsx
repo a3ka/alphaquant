@@ -110,6 +110,7 @@ export function MainContent() {
               formatDate={(date) => new Date(date).toLocaleDateString()}
               onPortfolioChange={handlePortfolioChange}
               setIsAddTransactionOpen={setIsAddTransactionOpen}
+              selectedPortfolio={selectedPortfolio}
             />
 
             <PortfolioTable 

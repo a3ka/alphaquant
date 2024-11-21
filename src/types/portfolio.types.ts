@@ -154,6 +154,7 @@ export interface Asset {
     formatDate: (date: string) => string
     onPortfolioChange: (portfolio: Portfolio) => void
     setIsAddTransactionOpen: (value: boolean) => void
+    selectedPortfolio: Portfolio | null
   }
   
   
