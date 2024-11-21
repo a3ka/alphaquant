@@ -9,12 +9,16 @@ interface PortfolioTableProps {
   assets: Asset[]
   isAddTransactionOpen: boolean
   setIsAddTransactionOpen: (value: boolean) => void
+  currentSelectedAsset?: Asset | null
+  setSelectedAsset?: (asset: Asset | null) => void
 }
 
 export function PortfolioTable({
   assets,
   isAddTransactionOpen,
-  setIsAddTransactionOpen
+  setIsAddTransactionOpen,
+  currentSelectedAsset,
+  setSelectedAsset
 }: PortfolioTableProps) {
   return (
     <div className="mt-8">

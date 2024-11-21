@@ -30,6 +30,9 @@ export function MainContent() {
 
   const isEmptyPortfolio = !isLoading && assetsData?.isEmpty
 
+  // Проверяем есть ли активы в портфеле
+  const hasAssets = assetsData?.assets && assetsData.assets.length > 0
+
   // Вычисляем риск портфеля
   const portfolioRisk = useMemo(() => {
     if (!assetsData?.assets) return 0
@@ -64,6 +67,17 @@ export function MainContent() {
     )
   }
 
+  // Если нет активов, показываем EmptyPortfolioState
+  if (!hasAssets) {
+    return (
+      <EmptyPortfolioState 
+        onAddTransaction={() => setIsAddTransactionOpen(true)}
+        onPortfolioChange={handlePortfolioChange}
+        selectedPortfolio={selectedPortfolio}
+      />
+    )
+  }
+
   const formatYAxis = (value: number) => {
     if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`
     if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`
@@ -81,7 +95,6 @@ export function MainContent() {
       <Card className="bg-transparent">
         <CardContent className="p-6">
           <div className="space-y-6">
-            
 
             <PortfolioCharts
               timeRange={timeRange}
@@ -97,6 +110,14 @@ export function MainContent() {
               formatDate={(date) => new Date(date).toLocaleDateString()}
               onPortfolioChange={handlePortfolioChange}
               setIsAddTransactionOpen={setIsAddTransactionOpen}
+            />
+
+            <PortfolioTable 
+              assets={assetsData?.assets || []}
+              isAddTransactionOpen={isAddTransactionOpen}
+              setIsAddTransactionOpen={setIsAddTransactionOpen}
+              currentSelectedAsset={currentSelectedAsset}
+              setSelectedAsset={assetsData?.setSelectedAsset}
             />
           </div>
         </CardContent>

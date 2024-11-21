@@ -6,21 +6,26 @@ import { Portfolio } from '@/src/types/portfolio.types'
 import { PortfolioSelector } from './PortfolioSelector'
 import { Tabs, TabsList } from '@/components/ui/tabs'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
+import { FakePortfolio } from '@/app/data/fakePortfolio'
 
 interface EmptyPortfolioStateProps {
   onAddTransaction: () => void
   onPortfolioChange: (portfolio: Portfolio) => void
+  selectedPortfolio: Portfolio | null
 }
 
 
-export function EmptyPortfolioState({ onAddTransaction, onPortfolioChange }: EmptyPortfolioStateProps) {
+export function EmptyPortfolioState({ onAddTransaction, onPortfolioChange, selectedPortfolio }: EmptyPortfolioStateProps) {
     return (
     <Card className="bg-transparent border-0">
       <CardHeader>      
         <div className="flex justify-between items-center mb-4">
           <CardTitle className="text-white text-xl font-semibold">Portfolio Overview</CardTitle> 
         </div>
-        <PortfolioSelector onPortfolioChange={onPortfolioChange} />
+        <PortfolioSelector 
+          onPortfolioChange={onPortfolioChange}
+          externalSelectedPortfolio={selectedPortfolio || FakePortfolio}
+        />
         <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
           <div className="text-lg mb-2">No data available</div>
           <div className="text-sm mb-4">Add transactions to see portfolio analytics</div>
