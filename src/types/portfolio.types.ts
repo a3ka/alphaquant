@@ -60,6 +60,13 @@ export interface Asset {
     return typeof portfolio?.id === 'string'
   }
   
+  export interface AssetMetadata {
+    name: string
+    logo: string
+    current_price: number
+    price_change_24h: number
+  }
+  
   export interface PortfolioBalance {
     id: number
     portfolio_id: number
@@ -68,11 +75,23 @@ export interface Asset {
     borrowed: number
     in_collateral: number
     last_updated: string
+    metadata: AssetMetadata
   }
   
   export interface PortfolioBalancesResponse {
     balances: PortfolioBalance[]
     isEmpty: boolean
+  }
+  
+  export interface UsePortfolioBalanceReturn {
+    assets: Asset[]
+    totalValue: number
+    isLoading: boolean
+    isEmpty: boolean
+    error: Error | null
+    selectedAsset: Asset | null
+    pieChartData: any[]
+    updateBalance: (coinTicker: string, amount: number, isMargin?: boolean) => Promise<void>
   }
   
   export enum Period {
@@ -90,5 +109,51 @@ export interface Asset {
     timestamp: Date
     period: Period
   }
-
+  
+  export type TimeRangeType = '24H' | '1W' | '1M' | '3M' | '6M' | '1Y' | 'ALL'
+  
+  export interface PieChartDataItem {
+    name: string
+    symbol: string
+    value: number
+    percentage: number
+    color: string
+    logo?: string
+  }
+  
+  export interface AssetsDataReturn {
+    assets: Asset[]
+    pieChartData: PieChartDataItem[]
+    selectedAsset: Asset | null
+    setSelectedAsset: (asset: Asset | null) => void
+    isEmpty: boolean
+    error: string | null
+  }
+  
+  export interface Balance {
+    coin_ticker: string
+    amount: number
+  }
+  
+  export interface ChartDataPoint {
+    date: string
+    value: number
+  }
+  
+  export interface PortfolioChartsProps {
+    timeRange: TimeRangeType
+    setTimeRange: (value: TimeRangeType) => void
+    portfolioData: ChartDataPoint[]
+    pieChartData: PieChartDataItem[]
+    assets: Asset[]
+    currentSelectedAsset: Asset | null
+    setSelectedAsset: (asset: Asset | null) => void
+    portfolioRisk: number
+    getRiskColor: (risk: number) => string
+    formatYAxis: (value: number) => string
+    formatDate: (date: string) => string
+    onPortfolioChange: (portfolio: Portfolio) => void
+    setIsAddTransactionOpen: (value: boolean) => void
+  }
+  
   

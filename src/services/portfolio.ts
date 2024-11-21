@@ -1,7 +1,8 @@
-import { createServerSupabaseClient } from './supabase/server'
+import { createServerSupabaseClient } from '@/src/services/supabase/server'
 import type { Portfolio, UserPortfolio, PortfolioHistory, PortfolioBalancesResponse } from '@/src/types/portfolio.types'
 import { Period } from '@/src/types/portfolio.types'
 import { marketService } from './market'
+import { getPeriodByRange, getStartDate } from '@/src/utils/date'
 
 // Все существующие методы из portfolio-actions.ts
 export const portfolioService = {
@@ -120,7 +121,7 @@ export const portfolioService = {
         .single();
   
       if (!portfolio) {
-        throw new Error("Портфель не найден");
+        throw new Error("Portfolio not found");
       }
   
       const { error } = await supabase
@@ -193,24 +194,47 @@ export const portfolioService = {
           last_updated
         `)
         .eq("portfolio_id", portfolioId)
-  
+
       if (error) throw error
-  
-      const hasNonZeroBalance = balances?.some(balance => 
+
+      // Получаем метаданные для всех монет
+      const enrichedBalances = await Promise.all(
+        balances.map(async (balance) => {
+          try {
+            const metadata = await marketService.getCoinMetadata(balance.coin_ticker)
+            return {
+              ...balance,
+              metadata: {
+                name: metadata?.name || balance.coin_ticker,
+                logo: metadata?.logo || '/images/default-coin.png',
+                current_price: metadata?.current_price || 1,
+                price_change_24h: metadata?.price_change_24h || 0
+              }
+            }
+          } catch (error) {
+            console.error(`Failed to fetch metadata for ${balance.coin_ticker}:`, error)
+            return {
+              ...balance,
+              metadata: {
+                name: balance.coin_ticker,
+                logo: '/images/default-coin.png',
+                current_price: 1,
+                price_change_24h: 0
+              }
+            }
+          }
+        })
+      )
+
+      const hasNonZeroBalance = enrichedBalances.some(balance => 
         balance.amount > 0 || balance.borrowed > 0 || balance.in_collateral > 0
       )
-  
-      // Добавляем portfolio_id к каждому балансу, если его нет
-      const balancesWithPortfolioId = balances?.map(balance => ({
-        ...balance,
-        portfolio_id: parseInt(portfolioId)
-      })) || []
-  
+
       return {
-        balances: balancesWithPortfolioId,
+        balances: enrichedBalances,
         isEmpty: !hasNonZeroBalance
       }
-  
+
     } catch (error: any) {
       console.error('Failed to get portfolio balances:', error)
       throw new Error(error.message)
@@ -346,7 +370,8 @@ export const portfolioService = {
       console.error('Failed to update portfolio data:', error)
       throw error
     }
-  }
+  },
+
 }
 
 

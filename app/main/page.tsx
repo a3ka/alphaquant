@@ -23,7 +23,7 @@ export default function CryptoDashboard() {
             <UserProfile />
           </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-20 max-w-[1920px] mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-20 pb-6 max-w-[1920px] mx-auto">
           <div className="lg:col-span-3">
             <LeftSidebar />
           </div>

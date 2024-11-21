@@ -5,50 +5,103 @@ import { ArrowUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Line, LineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Sector, ReferenceLine } from "recharts"
+import { MouseEvent, useMemo, useEffect } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ChartDataPoint, TimeRangeType, PortfolioChartsProps, Asset, PieChartDataItem } from '@/src/types/portfolio.types'
+import { PortfolioSelector } from './PortfolioSelector'
+import { Button } from "@/components/ui/button"
+import { Plus } from 'lucide-react'
 
-interface PortfolioChartsProps {
-  timeRange: string
-  setTimeRange: (value: string) => void
-  portfolioData: Array<{ date: string; value: number }>
-  pieChartData: Array<any>
-  currentSelectedAsset: any
-  setSelectedAsset: (asset: any) => void
-  portfolioRisk: number
-  getRiskColor: (risk: number) => string
-  formatYAxis: (value: number) => string
-  formatDate: (date: string) => string
-}
 
 export function PortfolioCharts({
   timeRange,
   setTimeRange,
   portfolioData,
-  pieChartData,
+  pieChartData: initialPieChartData,
+  assets,
   currentSelectedAsset,
   setSelectedAsset,
   portfolioRisk,
   getRiskColor,
   formatYAxis,
-  formatDate
+  formatDate,
+  onPortfolioChange,
+  setIsAddTransactionOpen
 }: PortfolioChartsProps) {
-  const highestValue = Math.max(...portfolioData.map(item => item.value))
+  useEffect(() => {
+    if (!currentSelectedAsset && processedPieChartData.length > 0) {
+      const firstAsset = assets.find(asset => asset.symbol === processedPieChartData[0].symbol)
+      if (firstAsset) {
+        setSelectedAsset(firstAsset)
+      }
+    }
+  }, [])
+
+  const handleTimeRangeChange = (value: string) => {
+    if (value === '24H' || value === '1W' || value === '1M' || value === '3M' || value === '6M' || value === '1Y' || value === 'ALL') {
+      setTimeRange(value as TimeRangeType)
+    }
+  }
+
+  const processedPieChartData = useMemo(() => {
+    // Сортируем по процентам в портфеле
+    const sortedData = [...initialPieChartData].sort((a, b) => b.percentage - a.percentage)
+    
+    // Берем топ-7 активов
+    const topAssets = sortedData.slice(0, 7)
+    
+    // Считаем общую сумму оставшихся активов
+    const otherAssets = sortedData.slice(7)
+    const otherValue = otherAssets.reduce((sum, asset) => sum + asset.value, 0)
+    const otherPercentage = otherAssets.reduce((sum, asset) => sum + asset.percentage, 0)
+    
+    if (otherAssets.length === 0) return topAssets
+
+    return [
+      ...topAssets,
+      {
+        name: 'Other',
+        symbol: 'OTHER',
+        value: otherValue,
+        percentage: otherPercentage,
+        color: '#6B7280'
+      }
+    ]
+  }, [initialPieChartData])
+
+  const highestValue = Math.max(...portfolioData.map((item: ChartDataPoint) => item.value))
   const highestValueDate = portfolioData.find(item => item.value === highestValue)?.date
 
+  const handlePieClick = (_: MouseEvent<SVGElement>, index: number) => {
+    const clickedItem = processedPieChartData[index];
+    if (clickedItem.symbol === 'OTHER') return;
+    
+    const correspondingAsset = assets.find(asset => asset.symbol === clickedItem.symbol);
+    if (correspondingAsset) {
+      setSelectedAsset(correspondingAsset);
+    }
+  };
+
   return (
-    <Card className="bg-transparent">
+    <Card className="bg-transparent border-0">
       <CardHeader>
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center mb-4">
           <CardTitle className="text-white text-xl font-semibold">Portfolio Overview</CardTitle>
-          <Tabs value={timeRange} onValueChange={setTimeRange}>
-            <TabsList>
-              <TabsTrigger value="24H">24H</TabsTrigger>
-              <TabsTrigger value="7D">7D</TabsTrigger>
-              <TabsTrigger value="1M">1M</TabsTrigger>
-              <TabsTrigger value="ALL">ALL</TabsTrigger>
+          <Tabs value={timeRange} onValueChange={handleTimeRangeChange}>
+            <TabsList className="bg-[#1F2937] border border-gray-700">
+              {['24H', '1W', '1M', '3M', '6M', '1Y', 'ALL'].map((range) => (
+                <TabsTrigger 
+                  key={range}
+                  className="data-[state=active]:bg-[#374151] text-gray-400 data-[state=active]:text-white hover:text-white" 
+                  value={range}
+                >
+                  {range}
+                </TabsTrigger>
+              ))}
             </TabsList>
           </Tabs>
         </div>
+        <PortfolioSelector onPortfolioChange={onPortfolioChange} />
       </CardHeader>
       <CardContent>
         <div className="mb-6">
@@ -74,6 +127,7 @@ export function PortfolioCharts({
                 tickFormatter={formatDate}
                 tick={{ fontSize: 11 }}
                 dy={10}
+                interval="preserveStartEnd"
               />
               <YAxis 
                 stroke="#9CA3AF"
@@ -81,6 +135,8 @@ export function PortfolioCharts({
                 width={60}
                 tick={{ fontSize: 11 }}
                 dx={-10}
+                domain={['dataMin', 'dataMax']}
+                padding={{ top: 20, bottom: 20 }}
               />
               <Tooltip 
                 contentStyle={{ 
@@ -136,7 +192,7 @@ export function PortfolioCharts({
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={pieChartData}
+                    data={processedPieChartData}
                     cx="50%"
                     cy="50%"
                     innerRadius={80}
@@ -144,13 +200,8 @@ export function PortfolioCharts({
                     paddingAngle={2}
                     dataKey="value"
                     nameKey="symbol"
-                    onClick={(_, index) => {
-                      const asset = pieChartData[index];
-                      if ('logo' in asset) {
-                        setSelectedAsset(asset);
-                      }
-                    }}
-                    activeIndex={pieChartData.findIndex(a => a.symbol === currentSelectedAsset?.symbol)}
+                    onClick={handlePieClick}
+                    activeIndex={processedPieChartData.findIndex(a => a.symbol === currentSelectedAsset?.symbol)}
                     activeShape={(props: any) => {
                       const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
                       return (
@@ -168,7 +219,7 @@ export function PortfolioCharts({
                       );
                     }}
                   >
-                    {pieChartData.map((entry, index) => (
+                    {processedPieChartData.map((entry: PieChartDataItem, index: number) => (
                       <Cell 
                         key={`cell-${index}`} 
                         fill={entry.color}
@@ -193,15 +244,17 @@ export function PortfolioCharts({
                           <span style={{ color: entry.payload.color }}>{name}</span>
                           <span className="text-gray-300">{entry.payload.percentage.toFixed(2)}%</span>
                         </div>
-                        {entry.payload.symbol !== 'OTHER' && (
+                        {entry.payload.symbol !== 'OTHER' && entry.payload.amount && (
                           <>
                             <div className="text-[0.6rem] text-gray-300">
                               Amount: {entry.payload.amount.toLocaleString()} {name}
                             </div>
-                            <div className="flex justify-between text-[0.6rem]">
-                              <span>24h: <span className={entry.payload.change24h >= 0 ? 'text-green-400' : 'text-red-400'}>{entry.payload.change24h.toFixed(2)}%</span></span>
-                              <span>7d: <span className={entry.payload.change7d >= 0 ? 'text-green-400' : 'text-red-400'}>{entry.payload.change7d.toFixed(2)}%</span></span>
-                            </div>
+                            {entry.payload.change24h !== undefined && entry.payload.change7d !== undefined && (
+                              <div className="flex justify-between text-[0.6rem]">
+                                <span>24h: <span className={entry.payload.change24h >= 0 ? 'text-green-400' : 'text-red-400'}>{entry.payload.change24h.toFixed(2)}%</span></span>
+                                <span>7d: <span className={entry.payload.change7d >= 0 ? 'text-green-400' : 'text-red-400'}>{entry.payload.change7d.toFixed(2)}%</span></span>
+                              </div>
+                            )}
                           </>
                         )}
                       </div>,
@@ -223,20 +276,17 @@ export function PortfolioCharts({
           <div className="w-1/2 pl-4">
             <h3 className="text-white font-semibold mb-4">Portfolio Distribution</h3>
             <div className="space-y-3">
-              {pieChartData.map((asset) => (
+              {processedPieChartData.map((asset) => (
                 <div key={asset.symbol} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {asset.symbol === 'OTHER' ? (
-                      <Avatar className="h-5 w-5">
+                    <Avatar className="h-5 w-5">
+                      {asset.symbol === 'OTHER' ? (
                         <AvatarFallback>OTH</AvatarFallback>
-                      </Avatar>
-                    ) : (
-                      <Avatar className="h-5 w-5">
-                        <AvatarImage src={'logo' in asset ? asset.logo : ''} alt={asset.name} />
-                        <AvatarFallback>{asset.symbol}</AvatarFallback>
-                      </Avatar>
-                    )}
-                    <span className="text-white text-sm">{asset.symbol}</span>
+                      ) : (
+                        <AvatarImage src={asset.logo} alt={asset.name} />
+                      )}
+                    </Avatar>
+                    <span className="text-white text-sm">{asset.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-white text-sm">{asset.percentage.toFixed(2)}%</span>

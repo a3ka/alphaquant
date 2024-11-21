@@ -1,4 +1,3 @@
-import { stablecoinsMetadata } from '@/app/data/fakePortfolio'
 import { createServerSupabaseClient } from './supabase/server'
 
 interface CoinMarketData {
@@ -80,33 +79,57 @@ export const marketService = {
   },
 
   async getCoinMetadata(ticker: string) {
-    // Проверяем стейблкоины
-    const upperTicker = ticker.toUpperCase();
-    if (upperTicker === 'USDT' || upperTicker === 'USDC') {
-      return stablecoinsMetadata[upperTicker];
-    }
-
     try {
       const supabase = await createServerSupabaseClient();
       
       const { data, error } = await supabase
         .from('crypto_metadata')
         .select('*')
-        .eq('symbol', upperTicker)
-        .single();
-
+        .eq('symbol', ticker.toUpperCase())
+        .single(); // Возвращает только одну строку или вызывает ошибку
+  
+      // Если ошибка или данных нет
       if (error) {
         if (error.code === 'PGRST116') {
+          // Логируем отсутствие данных
           console.warn(`No metadata found for ticker: ${ticker}`);
           return null;
         }
         throw error;
       }
-
+  
       return data;
     } catch (error) {
       console.error('Failed to get coin metadata:', error);
       return null;
+    }
+  },
+
+  async createBasicCoinMetadata(data: {
+    ticker: string,
+    name: string,
+    current_price: number,
+    price_change_24h: number,
+    logo: string
+  }) {
+    try {
+      const supabase = await createServerSupabaseClient()
+      
+      const { error } = await supabase
+        .from('crypto_metadata')
+        .insert({
+          symbol: data.ticker.toUpperCase(),
+          name: data.name,
+          current_price: data.current_price,
+          price_change_24h: data.price_change_24h,
+          logo: data.logo,
+          last_updated: new Date().toISOString()
+        })
+
+      if (error) throw error
+    } catch (error) {
+      console.error('Failed to create basic coin metadata:', error)
+      throw error
     }
   }
 }
