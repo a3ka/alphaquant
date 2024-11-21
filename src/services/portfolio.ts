@@ -305,73 +305,37 @@ export const portfolioService = {
     }
   },
 
+  getPeriodsToUpdate(currentMinute: number, currentHour: number): Period[] {
+    const periods = []
+    
+    if (currentMinute % 15 === 0) periods.push(Period.MINUTE_15)
+    if (currentMinute === 0) periods.push(Period.HOUR_1)
+    if (currentMinute === 0 && currentHour % 4 === 0) periods.push(Period.HOUR_4)
+    if (currentMinute === 0 && currentHour === 0) periods.push(Period.HOUR_24)
+    
+    return periods
+  },
+
   async updatePortfolioData(portfolioId: number) {
     try {
-      const supabase = await createServerSupabaseClient()
-      
-      // Получаем балансы портфеля
       const { balances, isEmpty } = await this.getPortfolioBalances(portfolioId.toString())
       
-      if (!isEmpty) {
-        let totalValue = 0
-        
-        // Считаем общую стоимость портфеля
-        for (const balance of balances) {
-          const currentPrice = await marketService.getCurrentPrice(balance.coin_ticker)
-          totalValue += balance.amount * currentPrice
-        }
-
-        // Сохраняем историю для разных периодов
-        const now = new Date()
-        const currentMinute = now.getMinutes()
-        const currentHour = now.getHours()
-        
-        // 15-минутные данные
-        if (currentMinute % 15 === 0) {
-          await this.savePortfolioHistory({
-            portfolioId,
-            totalValue,
-            period: Period.MINUTE_15
-          })
-        }
-        
-        // Часовые данные
-        if (currentMinute === 0) {
-          await this.savePortfolioHistory({
-            portfolioId,
-            totalValue,
-            period: Period.HOUR_1
-          })
-        }
-        
-        // 4-часовые данные
-        if (currentMinute === 0 && currentHour % 4 === 0) {
-          await this.savePortfolioHistory({
-            portfolioId,
-            totalValue,
-            period: Period.HOUR_4
-          })
-        }
-        
-        // Дневные данные
-        if (currentMinute === 0 && currentHour === 0) {
-          await this.savePortfolioHistory({
-            portfolioId,
-            totalValue,
-            period: Period.HOUR_24
-          })
-        }
-
-        return totalValue
+      if (isEmpty) {
+        return 0
       }
-      
-      return 0
+
+      let totalValue = 0
+      for (const balance of balances) {
+        const currentPrice = await marketService.getCurrentPrice(balance.coin_ticker)
+        totalValue += balance.amount * currentPrice
+      }
+
+      return totalValue
     } catch (error) {
       console.error('Failed to update portfolio data:', error)
       throw error
     }
-  },
-
+  }
 }
 
 

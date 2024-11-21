@@ -15,53 +15,35 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Обновляем рыночные данные
-    await marketService.updateCryptoMetadata()
+    console.log('Starting cron job...')
     
-    // Получаем все активные портфели
+    await marketService.updateCryptoMetadata()
+    console.log('Market data updated')
+    
     const portfolios = await portfolioService.getAllActivePortfolios()
+    console.log(`Found ${portfolios.length} active portfolios`)
     
     const now = new Date()
     const currentMinute = now.getMinutes()
     const currentHour = now.getHours()
+    
+    let updatedCount = 0
+    let historyCount = 0
 
     for (const portfolio of portfolios) {
       try {
-        // Получаем текущую стоимость портфеля
         const totalValue = await portfolioService.updatePortfolioData(portfolio.id)
-        
-        // Сохраняем данные для разных периодов
-        const periodsToUpdate = []
+        const periodsToUpdate = portfolioService.getPeriodsToUpdate(currentMinute, currentHour)
+        updatedCount++
 
-        // 15-минутные данные
-        if (currentMinute % 15 === 0) {
-          periodsToUpdate.push(Period.MINUTE_15)
-        }
-
-        // Часовые данные
-        if (currentMinute === 0) {
-          periodsToUpdate.push(Period.HOUR_1)
-        }
-
-        // 4-часовые данные
-        if (currentMinute === 0 && currentHour % 4 === 0) {
-          periodsToUpdate.push(Period.HOUR_4)
-        }
-
-        // Дневные данные
-        if (currentMinute === 0 && currentHour === 0) {
-          periodsToUpdate.push(Period.HOUR_24)
-        }
-
-        // Сохраняем историю для каждого периода
         for (const period of periodsToUpdate) {
           await portfolioService.savePortfolioHistory({
             portfolioId: portfolio.id,
             totalValue,
             period
           })
+          historyCount++
         }
-
       } catch (error) {
         console.error(`Failed to update portfolio ${portfolio.id}:`, error)
         continue
@@ -71,9 +53,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ 
       success: true,
       message: 'Portfolio values updated successfully',
-      updatedPortfolios: portfolios.length
+      stats: {
+        totalPortfolios: portfolios.length,
+        updatedPortfolios: updatedCount,
+        savedHistoryRecords: historyCount
+      }
     })
-
   } catch (error: any) {
     console.error('Cron job failed:', error)
     return NextResponse.json(

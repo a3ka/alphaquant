@@ -11,6 +11,7 @@ import { ChartDataPoint, TimeRangeType, PortfolioChartsProps, Asset, PieChartDat
 import { PortfolioSelector } from './PortfolioSelector'
 import { Button } from "@/components/ui/button"
 import { Plus } from 'lucide-react'
+import { FakePortfolio } from '@/app/data/fakePortfolio'
 
 
 export function PortfolioCharts({
@@ -26,7 +27,8 @@ export function PortfolioCharts({
   formatYAxis,
   formatDate,
   onPortfolioChange,
-  setIsAddTransactionOpen
+  setIsAddTransactionOpen,
+  selectedPortfolio
 }: PortfolioChartsProps) {
   useEffect(() => {
     if (!currentSelectedAsset && processedPieChartData.length > 0) {
@@ -101,7 +103,11 @@ export function PortfolioCharts({
             </TabsList>
           </Tabs>
         </div>
-        <PortfolioSelector onPortfolioChange={onPortfolioChange} />
+        {/* <PortfolioSelector onPortfolioChange={onPortfolioChange} /> */}
+        <PortfolioSelector 
+          onPortfolioChange={onPortfolioChange}
+          externalSelectedPortfolio={selectedPortfolio || FakePortfolio}
+        />
       </CardHeader>
       <CardContent>
         <div className="mb-6">
