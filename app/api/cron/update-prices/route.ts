@@ -15,6 +15,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Обновляем метаданные в начале
+    try {
+      await marketService.updateCryptoMetadata()
+    } catch (error) {
+      console.error('Failed to update crypto metadata:', error)
+      // Продолжаем выполнение даже при ошибке обновления метаданных
+    }
+
     // Получаем номер текущей группы из параметров запроса
     const batchNumber = parseInt(request.nextUrl.searchParams.get('batch') || '0')
     console.log(`Starting cron job for batch ${batchNumber}...`)
@@ -75,9 +83,15 @@ export async function GET(request: NextRequest) {
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
       const nextBatchUrl = `${baseUrl}/api/cron/update-prices?batch=${batchNumber + 1}`
       console.log(`Triggering next batch: ${nextBatchUrl}`)
-      fetch(nextBatchUrl, {
-        headers: { 'Authorization': expectedAuth }
-      }).catch(console.error)
+      
+      // Используем абсолютный URL и добавляем метод
+      await fetch(nextBatchUrl, {
+        method: 'GET',
+        headers: { 
+          'Authorization': expectedAuth,
+          'Content-Type': 'application/json'
+        }
+      })
     }
 
     return NextResponse.json({ 
