@@ -15,9 +15,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log('Starting cron job...')
+    // Получаем номер текущей группы из параметров запроса
+    const batchNumber = parseInt(request.nextUrl.searchParams.get('batch') || '0')
+    console.log(`Starting cron job for batch ${batchNumber}...`)
     
-    // Получаем все портфели и разбиваем их на группы по 2
     const portfolios = await portfolioService.getAllActivePortfolios()
     const batchSize = 2
     const portfolioBatches = []
@@ -26,10 +27,18 @@ export async function GET(request: NextRequest) {
       portfolioBatches.push(portfolios.slice(i, i + batchSize))
     }
 
-    console.log(`Found ${portfolios.length} active portfolios, split into ${portfolioBatches.length} batches`)
+    // Проверяем, существует ли запрошенная группа
+    if (batchNumber >= portfolioBatches.length) {
+      return NextResponse.json({ 
+        success: true,
+        message: 'All batches processed',
+        stats: { totalPortfolios: portfolios.length }
+      })
+    }
+
+    const currentBatch = portfolioBatches[batchNumber]
+    console.log(`Processing batch ${batchNumber} with ${currentBatch.length} portfolios`)
     
-    // Обрабатываем только первую группу портфелей
-    const currentBatch = portfolioBatches[0]
     const now = new Date()
     
     const results = await Promise.all(
@@ -61,10 +70,11 @@ export async function GET(request: NextRequest) {
       savedHistoryRecords: acc.savedHistoryRecords + result.historyCount
     }), { updatedPortfolios: 0, savedHistoryRecords: 0 })
 
-    // Запускаем следующий крон для обработки следующей группы
-    if (portfolioBatches.length > 1) {
+    // Запускаем следующую группу
+    if (batchNumber + 1 < portfolioBatches.length) {
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
-      const nextBatchUrl = `${baseUrl}/api/cron/update-prices?batch=1`
+      const nextBatchUrl = `${baseUrl}/api/cron/update-prices?batch=${batchNumber + 1}`
+      console.log(`Triggering next batch: ${nextBatchUrl}`)
       fetch(nextBatchUrl, {
         headers: { 'Authorization': expectedAuth }
       }).catch(console.error)
@@ -72,11 +82,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ 
       success: true,
-      message: 'Portfolio batch updated successfully',
+      message: `Batch ${batchNumber} processed successfully`,
       stats: {
         totalPortfolios: portfolios.length,
         currentBatchSize: currentBatch.length,
-        remainingBatches: portfolioBatches.length - 1,
+        remainingBatches: portfolioBatches.length - batchNumber - 1,
         ...stats
       }
     })
