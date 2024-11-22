@@ -6,7 +6,10 @@
     "dev": "next dev --turbo",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.0.2",
@@ -75,15 +78,23 @@
     "zod": "^3.23.5"
   },
   "devDependencies": {
-    "@types/node": "latest",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.9.1",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "autoprefixer": "latest",
     "eslint": "latest",
     "eslint-config-next": "latest",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "node-fetch": "2",
     "postcss": "latest",
     "tailwindcss": "^3.3.5",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
     "typescript": "latest",
-    "vercel": "^39.0.3"
+    "vercel": "^39.0.3",
+    "whatwg-fetch": "^3.6.20"
   }
 }

@@ -49,10 +49,13 @@ export const marketService = {
   },
 
   async getCurrentPrice(ticker: string): Promise<number> {
+    if (ticker === 'USDT' || ticker === 'USDC') {
+      return 1
+    }
+
     try {
       const supabase = await createServerSupabaseClient()
       
-      // Получаем все записи для тикера
       const { data, error } = await supabase
         .from('crypto_metadata')
         .select('current_price')
@@ -63,13 +66,11 @@ export const marketService = {
         return 0
       }
 
-      // Если данных нет, возвращаем 0
       if (!data || data.length === 0) {
         console.warn(`No price data found for ${ticker}`)
         return 0
       }
 
-      // Возвращаем цену из первой записи
       return data[0].current_price || 0
       
     } catch (error) {
