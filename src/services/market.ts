@@ -80,6 +80,16 @@ export const marketService = {
   },
 
   async getCoinMetadata(ticker: string) {
+    if (ticker === 'USDT' || ticker === 'USDC') {
+      return {
+        name: ticker,
+        symbol: ticker,
+        logo: '/images/default-coin.png',
+        current_price: 1,
+        price_change_24h: 0
+      }
+    }
+
     try {
       const supabase = await createServerSupabaseClient();
       
