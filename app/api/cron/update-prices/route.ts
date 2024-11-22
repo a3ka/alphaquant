@@ -63,7 +63,8 @@ export async function GET(request: NextRequest) {
 
     // Запускаем следующий крон для обработки следующей группы
     if (portfolioBatches.length > 1) {
-      const nextBatchUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/cron/update-prices?batch=1`
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
+      const nextBatchUrl = `${baseUrl}/api/cron/update-prices?batch=1`
       fetch(nextBatchUrl, {
         headers: { 'Authorization': expectedAuth }
       }).catch(console.error)
