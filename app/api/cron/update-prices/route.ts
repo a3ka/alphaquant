@@ -17,22 +17,26 @@ export async function GET(request: NextRequest) {
 
     console.log('Starting cron job...')
     
-    const [_, portfolios] = await Promise.all([
-      marketService.updateCryptoMetadata(),
-      portfolioService.getAllActivePortfolios()
-    ])
+    // Получаем все портфели и разбиваем их на группы по 2
+    const portfolios = await portfolioService.getAllActivePortfolios()
+    const batchSize = 2
+    const portfolioBatches = []
     
-    console.log(`Found ${portfolios.length} active portfolios`)
+    for (let i = 0; i < portfolios.length; i += batchSize) {
+      portfolioBatches.push(portfolios.slice(i, i + batchSize))
+    }
+
+    console.log(`Found ${portfolios.length} active portfolios, split into ${portfolioBatches.length} batches`)
     
+    // Обрабатываем только первую группу портфелей
+    const currentBatch = portfolioBatches[0]
     const now = new Date()
-    const currentMinute = now.getMinutes()
-    const currentHour = now.getHours()
     
     const results = await Promise.all(
-      portfolios.map(async (portfolio) => {
+      currentBatch.map(async (portfolio) => {
         try {
           const totalValue = await portfolioService.updatePortfolioData(portfolio.id)
-          const periodsToUpdate = portfolioService.getPeriodsToUpdate(currentMinute, currentHour)
+          const periodsToUpdate = portfolioService.getPeriodsToUpdate(now.getMinutes(), now.getHours())
           
           await Promise.all(
             periodsToUpdate.map(period => 
@@ -57,11 +61,21 @@ export async function GET(request: NextRequest) {
       savedHistoryRecords: acc.savedHistoryRecords + result.historyCount
     }), { updatedPortfolios: 0, savedHistoryRecords: 0 })
 
+    // Запускаем следующий крон для обработки следующей группы
+    if (portfolioBatches.length > 1) {
+      const nextBatchUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/cron/update-prices?batch=1`
+      fetch(nextBatchUrl, {
+        headers: { 'Authorization': expectedAuth }
+      }).catch(console.error)
+    }
+
     return NextResponse.json({ 
       success: true,
-      message: 'Portfolio values updated successfully',
+      message: 'Portfolio batch updated successfully',
       stats: {
         totalPortfolios: portfolios.length,
+        currentBatchSize: currentBatch.length,
+        remainingBatches: portfolioBatches.length - 1,
         ...stats
       }
     })
