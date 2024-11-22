@@ -17,46 +17,52 @@ export async function GET(request: NextRequest) {
 
     console.log('Starting cron job...')
     
-    await marketService.updateCryptoMetadata()
-    console.log('Market data updated')
+    const [_, portfolios] = await Promise.all([
+      marketService.updateCryptoMetadata(),
+      portfolioService.getAllActivePortfolios()
+    ])
     
-    const portfolios = await portfolioService.getAllActivePortfolios()
     console.log(`Found ${portfolios.length} active portfolios`)
     
     const now = new Date()
     const currentMinute = now.getMinutes()
     const currentHour = now.getHours()
     
-    let updatedCount = 0
-    let historyCount = 0
-
-    for (const portfolio of portfolios) {
-      try {
-        const totalValue = await portfolioService.updatePortfolioData(portfolio.id)
-        const periodsToUpdate = portfolioService.getPeriodsToUpdate(currentMinute, currentHour)
-        updatedCount++
-
-        for (const period of periodsToUpdate) {
-          await portfolioService.savePortfolioHistory({
-            portfolioId: portfolio.id,
-            totalValue,
-            period
-          })
-          historyCount++
+    const results = await Promise.all(
+      portfolios.map(async (portfolio) => {
+        try {
+          const totalValue = await portfolioService.updatePortfolioData(portfolio.id)
+          const periodsToUpdate = portfolioService.getPeriodsToUpdate(currentMinute, currentHour)
+          
+          await Promise.all(
+            periodsToUpdate.map(period => 
+              portfolioService.savePortfolioHistory({
+                portfolioId: portfolio.id,
+                totalValue,
+                period
+              })
+            )
+          )
+          
+          return { success: true, historyCount: periodsToUpdate.length }
+        } catch (error) {
+          console.error(`Failed to update portfolio ${portfolio.id}:`, error)
+          return { success: false, historyCount: 0 }
         }
-      } catch (error) {
-        console.error(`Failed to update portfolio ${portfolio.id}:`, error)
-        continue
-      }
-    }
+      })
+    )
+
+    const stats = results.reduce((acc, result) => ({
+      updatedPortfolios: acc.updatedPortfolios + (result.success ? 1 : 0),
+      savedHistoryRecords: acc.savedHistoryRecords + result.historyCount
+    }), { updatedPortfolios: 0, savedHistoryRecords: 0 })
 
     return NextResponse.json({ 
       success: true,
       message: 'Portfolio values updated successfully',
       stats: {
         totalPortfolios: portfolios.length,
-        updatedPortfolios: updatedCount,
-        savedHistoryRecords: historyCount
+        ...stats
       }
     })
   } catch (error: any) {
