@@ -160,13 +160,36 @@ export const portfolioService = {
     }
   },
 
-  // Новые методы для работы с историей портфеля
+
   async savePortfolioHistory(data: {
     portfolioId: number
     totalValue: number
     period: Period
   }) {
+    console.log('Saving portfolio history:', {
+      portfolioId: data.portfolioId,
+      totalValue: data.totalValue,
+      period: data.period,
+      timestamp: new Date().toISOString()
+    })
+    
     const supabase = await createServerSupabaseClient()
+
+    // Если сохраняем CURRENT запись, сначала удаляем предыдущую
+    if (data.period === Period.CURRENT) {
+      const { error: deleteError } = await supabase
+        .from("portfolio_history")
+        .delete()
+        .eq("portfolio_id", data.portfolioId)
+        .eq("period", Period.CURRENT)
+
+      if (deleteError) {
+        console.error('Failed to delete previous CURRENT record:', deleteError)
+        throw deleteError
+      }
+    }
+    
+    // Сохраняем новую запись
     const { error } = await supabase
       .from("portfolio_history")
       .insert({
@@ -175,7 +198,13 @@ export const portfolioService = {
         period: data.period,
         timestamp: new Date().toISOString()
       })
-    if (error) throw error
+    
+    if (error) {
+      console.error('Failed to save portfolio history:', error)
+      throw error
+    }
+    
+    console.log('Portfolio history saved successfully')
   },
 
   async getPortfolioBalances(portfolioId: string): Promise<PortfolioBalancesResponse> {
@@ -305,14 +334,30 @@ export const portfolioService = {
     }
   },
 
-  getPeriodsToUpdate(currentMinute: number, currentHour: number): Period[] {
-    const periods = []
+  getPeriodsToUpdate(minutes: number, hours: number): Period[] {
+    const periods: Period[] = []
     
-    if (currentMinute % 15 === 0) periods.push(Period.MINUTE_15)
-    if (currentMinute === 0) periods.push(Period.HOUR_1)
-    if (currentMinute === 0 && currentHour % 4 === 0) periods.push(Period.HOUR_4)
-    if (currentMinute === 0 && currentHour === 0) periods.push(Period.HOUR_24)
+    // Каждые 15 минут (0, 15, 30, 45)
+    if (minutes % 15 === 0) {
+      periods.push(Period.MINUTE_15)
+    }
     
+    // Каждый час (когда minutes = 0)
+    if (minutes === 0) {
+      periods.push(Period.HOUR_1)
+    }
+    
+    // Каждые 4 часа (0, 4, 8, 12, 16, 20)
+    if (minutes === 0 && hours % 4 === 0) {
+      periods.push(Period.HOUR_4)
+    }
+    
+    // Каждые 24 часа (в полночь)
+    if (minutes === 0 && hours === 0) {
+      periods.push(Period.HOUR_24)
+    }
+
+    console.log('Periods to update:', periods)
     return periods
   },
 
@@ -334,6 +379,47 @@ export const portfolioService = {
     } catch (error) {
       console.error('Failed to update portfolio data:', error)
       throw error
+    }
+  },
+
+  async updateCurrentValue(portfolioId: number, totalValue: number) {
+    try {
+      const supabase = await createServerSupabaseClient()
+      
+      // Удаляем предыдущую CURRENT запись
+      await supabase
+        .from("portfolio_history")
+        .delete()
+        .eq("portfolio_id", portfolioId)
+        .eq("period", "CURRENT")
+      
+      // Добавляем новую
+      await this.savePortfolioHistory({
+        portfolioId,
+        totalValue,
+        period: Period.CURRENT
+      })
+      
+    } catch (error) {
+      console.error('Failed to update current value:', error)
+      throw error
+    }
+  },
+
+  async deleteCurrentValue(portfolioId: number) {
+    try {
+      const supabase = await createServerSupabaseClient()
+      
+      const { error } = await supabase
+        .from("portfolio_history")
+        .delete()
+        .eq("portfolio_id", portfolioId)
+        .eq("period", Period.CURRENT)
+
+      if (error) throw error
+    } catch (error: any) {
+      console.error('Failed to delete current value:', error)
+      throw new Error(error.message)
     }
   }
 }

@@ -204,6 +204,7 @@ model portfolio_history {
 }
 
 enum Period {
+  CURRENT    // Текущее значение (временное)
   MINUTE_15  // Каждые 15 минут
   HOUR_1     // Каждый час
   HOUR_4     // Каждые 4 часа

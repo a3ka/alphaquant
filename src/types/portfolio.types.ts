@@ -95,11 +95,11 @@ export interface Asset {
   }
   
   export enum Period {
+    CURRENT = 'CURRENT',
     MINUTE_15 = 'MINUTE_15',
     HOUR_1 = 'HOUR_1',
     HOUR_4 = 'HOUR_4',
-    HOUR_24 = 'HOUR_24',
-    DAY_1 = 'DAY_1'
+    HOUR_24 = 'HOUR_24'
   }
   
   export interface PortfolioHistory {

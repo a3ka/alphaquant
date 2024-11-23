@@ -4,6 +4,9 @@ import { portfolioService } from '@/src/services/portfolio'
 import { Period } from '@/src/types/portfolio.types'
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now()
+  console.log('=== Starting update-prices cron job ===')
+  
   try {
     const authHeader = request.headers.get('Authorization')
     const expectedAuth = `Bearer ${process.env.CRON_SECRET}`
@@ -48,30 +51,46 @@ export async function GET(request: NextRequest) {
     console.log(`Processing batch ${batchNumber} with ${currentBatch.length} portfolios`)
     
     const now = new Date()
+    console.log('Current time:', now.toISOString())
     
     const results = await Promise.all(
       currentBatch.map(async (portfolio) => {
         try {
-          const totalValue = await portfolioService.updatePortfolioData(portfolio.id)
-          const periodsToUpdate = portfolioService.getPeriodsToUpdate(now.getMinutes(), now.getHours())
+          console.log(`Processing portfolio ${portfolio.id}`)
           
-          await Promise.all(
-            periodsToUpdate.map(period => 
-              portfolioService.savePortfolioHistory({
+          const totalValue = await portfolioService.updatePortfolioData(portfolio.id)
+          console.log(`Portfolio ${portfolio.id} total value:`, totalValue)
+          
+          const periodsToUpdate = portfolioService.getPeriodsToUpdate(now.getMinutes(), now.getHours())
+          console.log('Periods to update:', periodsToUpdate)
+          
+          await Promise.all([
+            portfolioService.deleteCurrentValue(portfolio.id),
+            ...periodsToUpdate.map(async period => {
+              await portfolioService.savePortfolioHistory({
                 portfolioId: portfolio.id,
                 totalValue,
                 period
               })
-            )
-          )
-          
-          return { success: true, historyCount: periodsToUpdate.length }
+            })
+          ])
+
+          // Возвращаем результат с количеством сохраненных записей
+          return { 
+            success: true, 
+            historyCount: periodsToUpdate.length 
+          }
         } catch (error) {
           console.error(`Failed to update portfolio ${portfolio.id}:`, error)
           return { success: false, historyCount: 0 }
         }
       })
     )
+
+    const executionTime = Date.now() - startTime
+    console.log('=== Cron job completed ===')
+    console.log('Execution time:', executionTime, 'ms')
+    console.log('Results:', JSON.stringify(results, null, 2))
 
     const stats = results.reduce((acc, result) => ({
       updatedPortfolios: acc.updatedPortfolios + (result.success ? 1 : 0),
