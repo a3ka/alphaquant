@@ -29,6 +29,7 @@ describe('GET /api/cron/update-prices', () => {
     jest.spyOn(portfolioService, 'updatePortfolioData').mockResolvedValue(1000)
     jest.spyOn(portfolioService, 'getPeriodsToUpdate').mockReturnValue([Period.MINUTE_15])
     jest.spyOn(portfolioService, 'savePortfolioHistory').mockResolvedValue()
+    jest.spyOn(portfolioService, 'deleteCurrentValue').mockResolvedValue()
     
     // Мок для fetch
     global.fetch = jest.fn().mockImplementation(() => Promise.resolve(new MockResponse()))
@@ -122,5 +123,18 @@ describe('GET /api/cron/update-prices', () => {
 
     expect(response.status).toBe(500)
     expect(data.error).toBe('Database error')
+  })
+
+  it('should delete CURRENT value before saving regular periods', async () => {
+    jest.spyOn(portfolioService, 'getAllActivePortfolios').mockResolvedValue([{ id: 1 }])
+
+    await GET(mockRequest(`Bearer ${process.env.CRON_SECRET}`))
+
+    expect(portfolioService.deleteCurrentValue).toHaveBeenCalledWith(1)
+    expect(portfolioService.savePortfolioHistory).toHaveBeenCalledWith({
+      portfolioId: 1,
+      totalValue: 1000,
+      period: Period.MINUTE_15
+    })
   })
 })
