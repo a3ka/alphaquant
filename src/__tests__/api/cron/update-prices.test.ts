@@ -137,4 +137,24 @@ describe('GET /api/cron/update-prices', () => {
       period: Period.MINUTE_15
     })
   })
+
+  it('should handle force parameter correctly', async () => {
+    const url = new URL('http://localhost/api/cron/update-prices')
+    url.searchParams.set('force', 'hour4')
+    const request = new NextRequest(url, {
+      headers: new Headers({
+        'Authorization': `Bearer ${process.env.CRON_SECRET}`
+      })
+    })
+
+    const response = await GET(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(portfolioService.savePortfolioHistory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        period: Period.HOUR_4
+      })
+    )
+  })
 })

@@ -53,6 +53,17 @@ export async function GET(request: NextRequest) {
     const now = new Date()
     console.log('Current time:', now.toISOString())
     
+    const force = request.nextUrl.searchParams.get('force')
+    const periodsToUpdate = force 
+      ? [
+          Period.MINUTE_15,
+          ...(force === 'hour' ? [Period.HOUR_1] : []),
+          ...(force === 'hour4' ? [Period.HOUR_4] : []),
+          ...(force === 'hour24' ? [Period.HOUR_24] : [])
+        ]
+      : portfolioService.getPeriodsToUpdate(now.getMinutes(), now.getHours())
+    console.log('Periods to update:', periodsToUpdate)
+    
     const results = await Promise.all(
       currentBatch.map(async (portfolio) => {
         try {
@@ -60,9 +71,6 @@ export async function GET(request: NextRequest) {
           
           const totalValue = await portfolioService.updatePortfolioData(portfolio.id)
           console.log(`Portfolio ${portfolio.id} total value:`, totalValue)
-          
-          const periodsToUpdate = portfolioService.getPeriodsToUpdate(now.getMinutes(), now.getHours())
-          console.log('Periods to update:', periodsToUpdate)
           
           await Promise.all([
             portfolioService.deleteCurrentValue(portfolio.id),
