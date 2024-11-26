@@ -128,6 +128,7 @@ export interface Asset {
     setSelectedAsset: (asset: Asset | null) => void
     isEmpty: boolean
     error: string | null
+    mutate: () => Promise<void>
   }
   
   export interface Balance {
@@ -142,8 +143,8 @@ export interface Asset {
   
   export interface PortfolioChartsProps {
     timeRange: TimeRangeType
-    setTimeRange: (value: TimeRangeType) => void
-    portfolioData: ChartDataPoint[]
+    setTimeRange: (range: TimeRangeType) => void
+    portfolioData: ChartDataPoint[] | undefined
     pieChartData: PieChartDataItem[]
     assets: Asset[]
     currentSelectedAsset: Asset | null
@@ -153,8 +154,35 @@ export interface Asset {
     formatYAxis: (value: number) => string
     formatDate: (date: string) => string
     onPortfolioChange: (portfolio: Portfolio) => void
-    setIsAddTransactionOpen: (value: boolean) => void
-    selectedPortfolio: Portfolio | null
+    setIsAddTransactionOpen: (isOpen: boolean) => void
+    selectedPortfolio: Portfolio | undefined
+  }
+  
+  export interface CoinMetadata {
+    name: string
+    symbol: string
+    logo: string
+    current_price: number
+    price_change_24h: number
+    market_cap_rank: number
+  }
+  
+  export interface EnrichedPortfolioBalance extends PortfolioBalance {
+    metadata: {
+      name: string
+      logo: string
+      current_price: number
+      price_change_24h: number
+    }
+  }
+  
+  export type PortfolioId = number
+  
+  export interface PortfolioHistoryReturn {
+    data: ChartDataPoint[]
+    error: string | null
+    isLoading: boolean
+    mutate: () => Promise<void>
   }
   
   

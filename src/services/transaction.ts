@@ -30,7 +30,7 @@ export const transactionService = {
           borrowed_amount: data.borrowedAmount,
           target_portfolio_id: data.targetPortfolioId,
           notes: data.notes,
-          transaction_time: data.transactionTime?.toISOString() || new Date().toISOString(),
+          transaction_time: data.transactionTime || new Date().toISOString(),
           created_time: new Date().toISOString()
         }])
         .select()

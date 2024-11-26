@@ -71,8 +71,8 @@ export function PortfolioCharts({
     ]
   }, [initialPieChartData])
 
-  const highestValue = Math.max(...portfolioData.map((item: ChartDataPoint) => item.value))
-  const highestValueDate = portfolioData.find(item => item.value === highestValue)?.date
+  const highestValue = portfolioData ? Math.max(...portfolioData.map((item: ChartDataPoint) => item.value)) : 0
+  const highestValueDate = portfolioData?.find(item => item.value === highestValue)?.date
 
   const handlePieClick = (_: MouseEvent<SVGElement>, index: number) => {
     const clickedItem = processedPieChartData[index];
@@ -120,7 +120,7 @@ export function PortfolioCharts({
 
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={portfolioData}>
+            <LineChart data={portfolioData || []}>
               <CartesianGrid 
                 strokeDasharray="3 3" 
                 stroke="#1F2937" 

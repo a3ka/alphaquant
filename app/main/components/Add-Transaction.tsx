@@ -18,6 +18,7 @@ import { Portfolio, isDemoPortfolio } from '@/src/types/portfolio.types'
 import { FakePortfolio } from '@/app/data/fakePortfolio'
 import { AddStablecoinDialog } from './AddStablecoinDialog'
 import { toast } from "sonner"
+import { CoinSelect } from './CoinSelect'
 
 const coins = [
   { label: "Bitcoin", value: "BTC", icon: "https://assets.coingecko.com/coins/images/1/standard/bitcoin.png?1696501400", amount: 1.5 },
@@ -47,9 +48,15 @@ interface AddTransactionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedPortfolioId: string;
+  onSuccess?: () => void;
 }
 
-export function AddTransactionDialog({ open, onOpenChange, selectedPortfolioId }: AddTransactionDialogProps) {
+export function AddTransactionDialog({
+  open,
+  onOpenChange,
+  selectedPortfolioId,
+  onSuccess
+}: AddTransactionDialogProps) {
   const { user } = useUser()
   const [portfolios, setPortfolios] = useState<Portfolio[]>([FakePortfolio])
   
@@ -264,69 +271,70 @@ export function AddTransactionDialog({ open, onOpenChange, selectedPortfolioId }
     setInsufficientFunds(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!user?.id || !portfolio || !selectedCoin || !amount || !price) {
-      toast.error('Please fill in all required fields')
-      return
-    }
-
-    const selectedCoinData = coins.find(c => c.value === selectedCoin)
-    if (!selectedCoinData) {
-      toast.error('Invalid coin selected')
-      return
-    }
-
+  const handleSubmit = async () => {
     try {
+      if (!selectedCoin || !amount || !date || !user?.id || !portfolio) {
+        toast.error('Please fill in all required fields')
+        return
+      }
+
+      const portfolioId = Number(portfolio)
+      if (isNaN(portfolioId)) {
+        toast.error('Invalid portfolio ID')
+        return
+      }
+
+      // Создаем объект даты с учетом времени
+      const [hours, minutes] = time.split(':').map(Number)
+      const transactionDateTime = new Date(date)
+      transactionDateTime.setHours(hours, minutes)
+
       const response = await fetch('/api/transaction', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          portfolioId: Number(portfolio),
+          portfolioId,
           userId: user.id,
           type: transactionType.toUpperCase(),
-          coinName: selectedCoinData.label,
-          coinTicker: selectedCoinData.value,
+          coinName: selectedCoin,
+          coinTicker: selectedCoin,
           amount: Number(amount),
-          paymentMethod,
+          paymentMethod: paymentMethod,
           paymentPrice: Number(price),
           paymentTotal: Number(amount) * Number(price),
-          priceUsd: Number(price), // Предполагая, что цена в USD
+          priceUsd: Number(price),
           totalUsd: Number(amount) * Number(price),
-          transactionTime: date ? new Date(date) : undefined,
-          targetPortfolioId: transactionType === 'transfer' ? Number(targetPortfolio) : undefined,
-          notes: '' // Можно добавить поле для заметок в форму
+          transactionTime: transactionDateTime.toISOString()
         })
       })
-      
+
       if (!response.ok) {
-        throw new Error('Failed to create transaction')
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to create transaction')
       }
-      
-      const result = await response.json()
-      toast.success('Transaction created successfully')
-      resetForm()
+
+      toast.success('Transaction added successfully')
       onOpenChange(false)
-    } catch (error) {
+      
+      if (onSuccess) {
+        await onSuccess()
+      }
+
+      resetForm()
+      
+    } catch (error: any) {
       console.error('Failed to create transaction:', error)
-      toast.error('Failed to create transaction')
+      toast.error(error.message || 'Failed to add transaction')
     }
   }
 
   return (
-    <Dialog 
-      open={open} 
-      onOpenChange={(isOpen) => {
-        if (!isOpen) {
-          resetForm();
-        }
-        onOpenChange(isOpen);
-      }}
-    >
-      <DialogContent className="sm:max-w-[425px] md:max-w-[450px] lg:max-w-[500px] bg-[#0A1929] text-white overflow-y-auto max-h-[90vh]">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-[#1F2937] border-gray-600 text-white">
         <DialogHeader>
-          <DialogTitle className="text-lg sm:text-xl font-bold text-white">Add Transaction</DialogTitle>
+          <DialogTitle className="text-lg font-bold text-white">Add Transaction</DialogTitle>
           <DialogDescription className="text-sm text-gray-400">Enter the details of your transaction here.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -544,25 +552,10 @@ export function AddTransactionDialog({ open, onOpenChange, selectedPortfolioId }
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor="coin" className="text-sm font-medium text-gray-300">Coin</Label>
-                  <Select value={selectedCoin} onValueChange={setSelectedCoin}>
-                    <SelectTrigger id="coin" className="w-full bg-[#1F2937] border-gray-600">
-                      <SelectValue placeholder="Select coin" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#1F2937] border-gray-600">
-                      {coins.map((coin) => (
-                        <SelectItem 
-                          key={coin.value} 
-                          value={coin.value}
-                          className="text-gray-200 hover:bg-gray-700 focus:bg-gray-700 focus:text-white"
-                        >
-                          <div className="flex items-center">
-                            <img src={coin.icon} alt={coin.label} className="w-4 h-4 mr-2" />
-                            <span className="text-sm font-medium text-white">{coin.label}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <CoinSelect 
+                    value={selectedCoin} 
+                    onValueChange={setSelectedCoin}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -828,11 +821,18 @@ export function AddTransactionDialog({ open, onOpenChange, selectedPortfolioId }
             </div>
           </div>
         </div>
-        <div className="flex justify-end mt-4">
-          <Button 
-            type="submit" 
-            className="bg-blue-500 hover:bg-blue-600 text-white text-sm py-1 px-3"
-            disabled={transactionType === 'transfer' ? selectedAssets.length === 0 : !selectedCoin || !amount || !price || !paymentMethod || (!isMarginPortfolio && insufficientFunds)}
+        <div className="flex justify-end gap-3 mt-6">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="bg-transparent text-white hover:bg-gray-700"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            className="bg-blue-600 hover:bg-blue-700"
+            disabled={!selectedCoin || !amount || !date || !portfolio}
           >
             Add Transaction
           </Button>

@@ -1,12 +1,12 @@
 import { useState, useCallback, useEffect } from 'react'
-import { Portfolio, TimeRangeType, isDemoPortfolio } from '@/src/types/portfolio.types'
+import { Portfolio, PortfolioHistoryReturn, TimeRangeType, isDemoPortfolio } from '@/src/types/portfolio.types'
 import { getPeriodByRange } from '@/src/utils/date'
 import { generateDataForTimeRange } from '@/app/data/fakePortfolio'
 import { ChartDataPoint } from '@/src/types/portfolio.types'
 
 
 
-export const usePortfolioHistory = (selectedPortfolio: Portfolio | null, timeRange: TimeRangeType) => {
+export const usePortfolioHistory = (selectedPortfolio: Portfolio | undefined, timeRange: TimeRangeType): PortfolioHistoryReturn => {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -45,5 +45,10 @@ export const usePortfolioHistory = (selectedPortfolio: Portfolio | null, timeRan
     loadChartData()
   }, [loadChartData])
 
-  return { chartData, error, isLoading }
+  return { 
+    data: chartData, 
+    error, 
+    isLoading,
+    mutate: loadChartData 
+  }
 }

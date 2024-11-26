@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Loader2, Plus } from 'lucide-react'
 import { Card, CardContent } from "@/components/ui/card"
 import { useUser } from "@clerk/nextjs"
-import { Portfolio, TimeRangeType } from '@/src/types/portfolio.types'
+import { Portfolio, TimeRangeType, Asset } from '@/src/types/portfolio.types'
 import { PortfolioSelector } from './PortfolioSelector'
 import { AddTransactionDialog } from "./Add-Transaction"
 import { usePortfolioHistory } from '@/src/hooks/portfolio/usePortfolioHistory'
@@ -17,50 +17,64 @@ import { EmptyPortfolioState } from './EmptyPortfolioState'
 
 export function MainContent() {
   const { user } = useUser()
-  const [selectedPortfolio, setSelectedPortfolio] = useState<Portfolio | null>(null)
+  const [selectedPortfolio, setSelectedPortfolio] = useState<Portfolio | undefined>(undefined)
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>('')
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false)
   const [timeRange, setTimeRange] = useState<TimeRangeType>('24H')
 
-  const assetsData = useAssetsData(selectedPortfolio)
-  const { chartData, error: chartError, isLoading: chartLoading } = usePortfolioHistory(selectedPortfolio, timeRange)
+  const { assets, pieChartData, selectedAsset, setSelectedAsset, error: assetsError, mutate: mutateAssets } = useAssetsData(selectedPortfolio)
+  const { 
+    data: chartData, 
+    error: chartError, 
+    isLoading: chartLoading,
+    mutate: mutateChart 
+  } = usePortfolioHistory(selectedPortfolio, timeRange)
 
-  const currentSelectedAsset = assetsData?.selectedAsset
-  const isLoading = chartLoading || !assetsData
+  const currentSelectedAsset = selectedAsset
+  const isLoading = chartLoading || !assets
 
-  const isEmptyPortfolio = !isLoading && assetsData?.isEmpty
+  const isEmptyPortfolio = !isLoading && (!assets || assets.length === 0)
 
   // Проверяем есть ли активы в портфеле
-  const hasAssets = assetsData?.assets && assetsData.assets.length > 0
+  const hasAssets = assets && assets.length > 0
 
   // Вычисляем риск портфеля
   const portfolioRisk = useMemo(() => {
-    if (!assetsData?.assets) return 0
-    const volatilityFactor = assetsData.assets.reduce((acc, asset) => {
+    if (!assets) return 0
+    const volatilityFactor = assets.reduce((acc: number, asset: Asset) => {
       return acc + (Math.abs(asset.change24h) + Math.abs(asset.change7d)) * (asset.percentage / 100)
     }, 0)
     return Math.min(Math.max(volatilityFactor * 2.5, 0), 100)
-  }, [assetsData?.assets])
+  }, [assets])
 
   // Обработчик смены портфеля
-  const handlePortfolioChange = (portfolio: Portfolio) => {
+  const handlePortfolioChange = useCallback((portfolio: Portfolio) => {
     setSelectedPortfolio(portfolio)
     setSelectedPortfolioId(portfolio.id.toString())
-  }
+  }, [])
 
   // Инициализация первого портфеля
   useEffect(() => {
     if (!selectedPortfolio) {
       handlePortfolioChange(FakePortfolio)
     }
-  }, [])
+  }, [handlePortfolioChange, selectedPortfolio])
 
-  if (chartError || assetsData?.error) {
+  const refreshData = useCallback(async () => {
+    if (selectedPortfolio) {
+      await Promise.all([
+        mutateAssets(),
+        mutateChart()
+      ])
+    }
+  }, [selectedPortfolio, mutateAssets, mutateChart])
+
+  if (chartError || assetsError) {
     return (
       <main className="w-full bg-[#010714] rounded-lg border border-gray-400">
         <Card className="bg-transparent">
           <CardContent className="flex items-center justify-center h-[600px] text-red-500">
-            {chartError || assetsData?.error}
+            {chartError || assetsError}
           </CardContent>
         </Card>
       </main>
@@ -95,15 +109,14 @@ export function MainContent() {
       <Card className="bg-transparent">
         <CardContent className="p-6">
           <div className="space-y-6">
-
             <PortfolioCharts
               timeRange={timeRange}
               setTimeRange={setTimeRange}
               portfolioData={chartData}
-              pieChartData={assetsData?.pieChartData || []}
-              assets={assetsData?.assets || []}
+              pieChartData={pieChartData || []}
+              assets={assets || []}
               currentSelectedAsset={currentSelectedAsset}
-              setSelectedAsset={assetsData?.setSelectedAsset}
+              setSelectedAsset={setSelectedAsset}
               portfolioRisk={portfolioRisk}
               getRiskColor={getRiskColor}
               formatYAxis={formatYAxis}
@@ -114,11 +127,11 @@ export function MainContent() {
             />
 
             <PortfolioTable 
-              assets={assetsData?.assets || []}
+              assets={assets || []}
               isAddTransactionOpen={isAddTransactionOpen}
               setIsAddTransactionOpen={setIsAddTransactionOpen}
               currentSelectedAsset={currentSelectedAsset}
-              setSelectedAsset={assetsData?.setSelectedAsset}
+              setSelectedAsset={setSelectedAsset}
             />
           </div>
         </CardContent>
@@ -128,6 +141,7 @@ export function MainContent() {
         open={isAddTransactionOpen}
         onOpenChange={setIsAddTransactionOpen}
         selectedPortfolioId={selectedPortfolioId}
+        onSuccess={refreshData}
       />
     </main>
   )

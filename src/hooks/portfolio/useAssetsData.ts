@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { 
   Portfolio, 
   Asset, 
@@ -7,65 +7,69 @@ import {
 } from '@/src/types/portfolio.types'
 import { marketService } from '@/src/services/market'
 
-export const useAssetsData = (selectedPortfolio: Portfolio | null): AssetsDataReturn => {
+export const useAssetsData = (selectedPortfolio: Portfolio | undefined): AssetsDataReturn => {
   const [assets, setAssets] = useState<Asset[]>([])
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const loadAssets = async () => {
-      if (!selectedPortfolio) return
+  const loadAssets = async () => {
+    if (!selectedPortfolio) return
 
-      try {
-        if (isDemoPortfolio(selectedPortfolio)) {
-          setAssets(selectedPortfolio.data.assets)
-          return
-        }
-
-        const response = await fetch(`/api/portfolio/${selectedPortfolio.id}/balance`)
-        if (!response.ok) {
-          throw new Error('Failed to fetch portfolio balances')
-        }
-        const { balances, isEmpty } = await response.json()
-        
-        if (isEmpty) {
-          setAssets([])
-          return
-        }
-
-        const assetsData = await Promise.all(
-          balances.map(async (balance: any) => {
-            const metadata = balance.metadata
-            return {
-              name: metadata.name,
-              symbol: balance.coin_ticker,
-              logo: metadata.logo,
-              amount: balance.amount,
-              price: metadata.current_price,
-              change24h: metadata.price_change_24h,
-              change7d: 0,
-              value: balance.amount * metadata.current_price,
-              profit: 0,
-              percentage: 0,
-              color: generateRandomColor()
-            }
-          })
-        )
-
-        const totalValue = assetsData.reduce((sum, asset) => sum + asset.value, 0)
-        const assetsWithPercentage = assetsData.map(asset => ({
-          ...asset,
-          percentage: (asset.value / totalValue) * 100
-        }))
-
-        setAssets(assetsWithPercentage)
-      } catch (error) {
-        console.error('Failed to load assets:', error)
-        setError(error instanceof Error ? error.message : 'Failed to load assets')
+    try {
+      if (isDemoPortfolio(selectedPortfolio)) {
+        setAssets(selectedPortfolio.data.assets)
+        return
       }
-    }
 
+      const response = await fetch(`/api/portfolio/${selectedPortfolio.id}/balance`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch portfolio balances')
+      }
+      const { balances, isEmpty } = await response.json()
+      
+      if (isEmpty) {
+        setAssets([])
+        return
+      }
+
+      const assetsData = await Promise.all(
+        balances.map(async (balance: any) => {
+          const metadata = balance.metadata
+          return {
+            name: metadata.name,
+            symbol: balance.coin_ticker,
+            logo: metadata.logo,
+            amount: balance.amount,
+            price: metadata.current_price,
+            change24h: metadata.price_change_24h,
+            change7d: 0,
+            value: balance.amount * metadata.current_price,
+            profit: 0,
+            percentage: 0,
+            color: generateRandomColor()
+          }
+        })
+      )
+
+      const totalValue = assetsData.reduce((sum, asset) => sum + asset.value, 0)
+      const assetsWithPercentage = assetsData.map(asset => ({
+        ...asset,
+        percentage: (asset.value / totalValue) * 100
+      }))
+
+      setAssets(assetsWithPercentage)
+    } catch (error) {
+      console.error('Failed to load assets:', error)
+      setError(error instanceof Error ? error.message : 'Failed to load assets')
+    }
+  }
+
+  useEffect(() => {
     loadAssets()
+  }, [selectedPortfolio])
+
+  const mutate = useCallback(async () => {
+    await loadAssets()
   }, [selectedPortfolio])
 
   const pieChartData = assets.map(({ name, symbol, value, percentage, color, amount, change24h, change7d, logo }) => ({
@@ -86,7 +90,8 @@ export const useAssetsData = (selectedPortfolio: Portfolio | null): AssetsDataRe
     selectedAsset,
     setSelectedAsset,
     isEmpty: assets.length === 0,
-    error
+    error,
+    mutate
   }
 }
 

@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from './supabase/server'
+import type { CoinMetadata } from '@/src/types/portfolio.types'
 
 interface CoinMarketData {
   id: string
@@ -14,6 +15,8 @@ interface CoinMarketData {
   ath_date: string
 }
 
+const DEFAULT_COIN_LOGO = 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png'
+
 export const marketService = {
   async updateCryptoMetadata() {
     try {
@@ -24,24 +27,43 @@ export const marketService = {
       
       const supabase = await createServerSupabaseClient()
       
-      const updates = result.map((coin: CoinMarketData) => ({
-        coin_id: coin.id,
-        symbol: coin.symbol.toUpperCase(),
-        name: coin.name,
-        logo: coin.image,
-        market_cap_rank: coin.market_cap_rank,
-        current_price: coin.current_price,
-        price_change_24h: coin.price_change_percentage_24h,
-        ath: coin.ath,
-        ath_date: coin.ath_date,
-        last_updated: new Date().toISOString()
-      }))
-
-      const { error } = await supabase
+      // Получаем существующие монеты из БД
+      const { data: existingCoins } = await supabase
         .from('crypto_metadata')
-        .upsert(updates, { onConflict: 'coin_id' })
+        .select('coin_id, symbol')
 
-      if (error) throw error
+      // Создаем Set существующих coin_id для быстрого поиска
+      const existingCoinIds = new Set(existingCoins?.map(coin => coin.coin_id) || [])
+      const existingSymbols = new Set(existingCoins?.map(coin => coin.symbol) || [])
+
+      // Фильтруем только новые монеты или те, которых нет в БД
+      const updates = result
+        .filter((coin: CoinMarketData) => {
+          const baseSymbol = coin.symbol.toUpperCase().split('.')[0];
+          return !existingCoinIds.has(coin.id) && 
+                 !existingSymbols.has(coin.symbol.toUpperCase()) &&
+                 !['USDT', 'USDC'].includes(baseSymbol);
+        })
+        .map((coin: CoinMarketData) => ({
+          coin_id: coin.id,
+          symbol: coin.symbol.toUpperCase(),
+          name: coin.name,
+          logo: coin.image,
+          market_cap_rank: coin.market_cap_rank,
+          current_price: coin.current_price,
+          price_change_24h: coin.price_change_percentage_24h,
+          ath: coin.ath,
+          ath_date: coin.ath_date,
+          last_updated: new Date().toISOString()
+        }))
+
+      if (updates.length > 0) {
+        const { error } = await supabase
+          .from('crypto_metadata')
+          .upsert(updates, { onConflict: 'coin_id' })
+
+        if (error) throw error
+      }
     } catch (error) {
       console.error('Failed to update crypto metadata:', error)
       throw error
@@ -79,39 +101,65 @@ export const marketService = {
     }
   },
 
-  async getCoinMetadata(ticker: string) {
-    if (ticker === 'USDT' || ticker === 'USDC') {
-      return {
-        name: ticker,
-        symbol: ticker,
-        logo: '/images/default-coin.png',
-        current_price: 1,
-        price_change_24h: 0
-      }
-    }
-
+  async getCoinMetadata(ticker?: string): Promise<CoinMetadata | CoinMetadata[] | null> {
     try {
       const supabase = await createServerSupabaseClient();
       
       const { data, error } = await supabase
         .from('crypto_metadata')
         .select('*')
-        .eq('symbol', ticker.toUpperCase())
-        .single(); // Возвращает только одну строку или вызывает ошибку
-  
-      // Если ошибка или данных нет
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // Логируем отсутствие данных
-          console.warn(`No metadata found for ticker: ${ticker}`);
-          return null;
+        .order('market_cap_rank', { ascending: true });
+
+      if (error) throw error;
+
+      // Если передан конкретный тикер, ищем только его
+      if (ticker) {
+        const coin = data?.find(c => c.symbol.toUpperCase() === ticker.toUpperCase());
+        if (coin) {
+          return {
+            name: coin.name,
+            symbol: coin.symbol,
+            logo: coin.logo || DEFAULT_COIN_LOGO,
+            current_price: coin.current_price,
+            price_change_24h: coin.price_change_24h,
+            market_cap_rank: coin.market_cap_rank
+          };
         }
-        throw error;
+        
+        // Проверяем, является ли монета стейблкоином
+        const stablecoin = STABLECOINS.find(s => s.symbol === ticker.toUpperCase());
+        if (stablecoin) {
+          return stablecoin;
+        }
+        
+        return null;
       }
-  
-      return data;
+
+      // Для списка всех монет
+      const uniqueCoins = new Map();
+      
+      // Добавляем стейблкоины
+      STABLECOINS.forEach(coin => {
+        uniqueCoins.set(coin.symbol, coin);
+      });
+      
+      // Добавляем остальные монеты
+      (data || []).forEach(coin => {
+        if (!uniqueCoins.has(coin.symbol)) {
+          uniqueCoins.set(coin.symbol, {
+            name: coin.name,
+            symbol: coin.symbol,
+            logo: coin.logo || DEFAULT_COIN_LOGO,
+            current_price: coin.current_price,
+            price_change_24h: coin.price_change_24h,
+            market_cap_rank: coin.market_cap_rank
+          });
+        }
+      });
+
+      return Array.from(uniqueCoins.values());
     } catch (error) {
-      console.error('Failed to get coin metadata:', error);
+      console.error('Failed to get crypto metadata:', error);
       return null;
     }
   },
@@ -144,3 +192,22 @@ export const marketService = {
     }
   }
 }
+
+const STABLECOINS: CoinMetadata[] = [
+  {
+    name: 'Tether',
+    symbol: 'USDT',
+    logo: DEFAULT_COIN_LOGO,
+    current_price: 1,
+    price_change_24h: 0,
+    market_cap_rank: 0
+  },
+  {
+    name: 'USD Coin',
+    symbol: 'USDC',
+    logo: DEFAULT_COIN_LOGO,
+    current_price: 1,
+    price_change_24h: 0,
+    market_cap_rank: 1
+  }
+];

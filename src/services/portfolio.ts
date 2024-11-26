@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from '@/src/services/supabase/server'
-import type { Portfolio, UserPortfolio, PortfolioHistory, PortfolioBalancesResponse } from '@/src/types/portfolio.types'
+import type { Portfolio, UserPortfolio, PortfolioHistory, PortfolioBalancesResponse, PortfolioId, PortfolioBalance, EnrichedPortfolioBalance, CoinMetadata } from '@/src/types/portfolio.types'
 import { Period } from '@/src/types/portfolio.types'
 import { marketService } from './market'
 import { getPeriodByRange, getStartDate } from '@/src/utils/date'
@@ -89,7 +89,7 @@ export const portfolioService = {
   },
 
   // Удаление портфеля
-  async deletePortfolio(portfolioId: string) {
+  async deletePortfolio(portfolioId: PortfolioId) {
     try {
       const supabase = await createServerSupabaseClient()
       
@@ -106,7 +106,7 @@ export const portfolioService = {
 
   // Обновление баланса
   async updatePortfolioBalance(
-    portfolioId: number,
+    portfolioId: PortfolioId,
     coinTicker: string,
     amount: number,
     isMargin: boolean
@@ -230,7 +230,7 @@ export const portfolioService = {
       const enrichedBalances = await Promise.all(
         balances.map(async (balance) => {
           try {
-            const metadata = await marketService.getCoinMetadata(balance.coin_ticker)
+            const metadata = await marketService.getCoinMetadata(balance.coin_ticker) as CoinMetadata | null
             return {
               ...balance,
               metadata: {
@@ -361,28 +361,39 @@ export const portfolioService = {
     return periods
   },
 
-  async updatePortfolioData(portfolioId: number) {
+  async updatePortfolioData(portfolioId: PortfolioId) {
     try {
+      console.log(`Starting update for portfolio ${portfolioId}`)
       const { balances, isEmpty } = await this.getPortfolioBalances(portfolioId.toString())
       
       if (isEmpty) {
+        console.log(`Portfolio ${portfolioId} is empty, skipping update`)
         return 0
       }
 
       let totalValue = 0
       for (const balance of balances) {
-        const currentPrice = await marketService.getCurrentPrice(balance.coin_ticker)
+        // Для стейблкоинов используем фиксированную цену 1
+        const isStablecoin = ['USDT', 'USDC', 'BUSD', 'DAI'].includes(balance.coin_ticker)
+        const currentPrice = isStablecoin ? 1 : await marketService.getCurrentPrice(balance.coin_ticker)
+        
+        if (currentPrice === null) {
+          console.warn(`No price found for ${balance.coin_ticker} in portfolio ${portfolioId}`)
+          continue
+        }
+        
         totalValue += balance.amount * currentPrice
       }
 
+      console.log(`Portfolio ${portfolioId} total value: ${totalValue}`)
       return totalValue
     } catch (error) {
-      console.error('Failed to update portfolio data:', error)
+      console.error(`Error updating portfolio ${portfolioId}:`, error)
       throw error
     }
   },
 
-  async updateCurrentValue(portfolioId: number, totalValue: number) {
+  async updateCurrentValue(portfolioId: PortfolioId, totalValue: number) {
     try {
       const supabase = await createServerSupabaseClient()
       
@@ -406,7 +417,7 @@ export const portfolioService = {
     }
   },
 
-  async deleteCurrentValue(portfolioId: number) {
+  async deleteCurrentValue(portfolioId: PortfolioId) {
     try {
       const supabase = await createServerSupabaseClient()
       
