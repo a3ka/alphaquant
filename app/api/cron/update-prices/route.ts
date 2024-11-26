@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
         const response = await fetch(nextBatchUrl, {
           method: 'GET',
           headers: { 
-            'Authorization': expectedAuth
+            'Authorization': `Bearer ${process.env.CRON_SECRET}`
           }
         })
         
