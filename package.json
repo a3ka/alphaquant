@@ -95,6 +95,7 @@
     "ts-node": "^10.9.2",
     "typescript": "latest",
     "vercel": "^39.0.3",
+    "web-streams-polyfill": "^4.0.0",
     "whatwg-fetch": "^3.6.20"
   }
 }

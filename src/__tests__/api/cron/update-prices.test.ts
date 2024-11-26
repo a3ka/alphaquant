@@ -3,7 +3,6 @@ import { GET } from '@/app/api/cron/update-prices/route'
 import { portfolioService } from '@/src/services/portfolio'
 import { marketService } from '@/src/services/market'
 import { Period } from '@/src/types/portfolio.types'
-import { MockNextRequest } from '@/jest.setup'
 
 jest.mock('@/src/services/portfolio')
 jest.mock('@/src/services/market')
@@ -58,7 +57,7 @@ describe('GET /api/cron/update-prices', () => {
       headers['Authorization'] = `Bearer ${options.auth}`
     }
 
-    return new MockNextRequest(url, { headers })
+    return new NextRequest(url, { headers })
   }
 
   describe('Authentication', () => {

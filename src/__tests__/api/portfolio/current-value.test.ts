@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { POST } from '@/app/api/portfolio/[id]/current-value/route'
 import { portfolioService } from '@/src/services/portfolio'
 import { Period } from '@/src/types/portfolio.types'
-import { MockNextRequest } from '@/jest.setup'
 
 jest.mock('@/src/services/portfolio')
 
 describe('POST /api/portfolio/[id]/current-value', () => {
   const mockRequest = (body: any): NextRequest => {
     const url = 'http://localhost/api/portfolio/1/current-value'
-    return new MockNextRequest(url, {
+    return new NextRequest(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
