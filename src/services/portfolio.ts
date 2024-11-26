@@ -366,6 +366,9 @@ export const portfolioService = {
       console.log(`Starting update for portfolio ${portfolioId}`)
       const { balances, isEmpty } = await this.getPortfolioBalances(portfolioId.toString())
       
+      console.log(`Portfolio ${portfolioId} balances:`, balances)
+      console.log(`Portfolio ${portfolioId} isEmpty:`, isEmpty)
+      
       if (isEmpty) {
         console.log(`Portfolio ${portfolioId} is empty, skipping update`)
         return 0
@@ -373,9 +376,14 @@ export const portfolioService = {
 
       let totalValue = 0
       for (const balance of balances) {
-        // Для стейблкоинов используем фиксированную цену 1
         const isStablecoin = ['USDT', 'USDC', 'BUSD', 'DAI'].includes(balance.coin_ticker)
         const currentPrice = isStablecoin ? 1 : await marketService.getCurrentPrice(balance.coin_ticker)
+        
+        console.log(`Portfolio ${portfolioId} - ${balance.coin_ticker}:`, {
+          amount: balance.amount,
+          currentPrice,
+          value: balance.amount * (currentPrice || 0)
+        })
         
         if (currentPrice === null) {
           console.warn(`No price found for ${balance.coin_ticker} in portfolio ${portfolioId}`)
@@ -385,7 +393,7 @@ export const portfolioService = {
         totalValue += balance.amount * currentPrice
       }
 
-      console.log(`Portfolio ${portfolioId} total value: ${totalValue}`)
+      console.log(`Portfolio ${portfolioId} final total value: ${totalValue}`)
       return totalValue
     } catch (error) {
       console.error(`Error updating portfolio ${portfolioId}:`, error)
