@@ -1,57 +1,118 @@
 import '@testing-library/jest-dom'
 import 'whatwg-fetch'
+import { NextRequest } from 'next/server'
+import { Headers } from 'next/dist/compiled/@edge-runtime/primitives'
 
-// Export mock classes for reuse
-export class MockResponse {
-  public status: number
-  private body: any
-  public headers: Headers
-
+class MockResponse extends Response {
   constructor(body?: BodyInit | null, init?: ResponseInit) {
-    this.body = typeof body === 'string' ? body : JSON.stringify(body)
-    this.status = init?.status || 200
-    this.headers = new Headers(init?.headers)
-  }
-
-  async json() {
-    return JSON.parse(this.body)
-  }
-
-  static json(data: any, init?: ResponseInit) {
-    return new MockResponse(JSON.stringify(data), init)
+    super(body || '', init)
   }
 }
 
-export class MockNextRequest extends Request {
-  public nextUrl: URL
+type SafeRequestInit = Omit<RequestInit, 'signal'> & {
+  signal?: AbortSignal | undefined
+}
 
-  constructor(input: RequestInfo | URL, init?: RequestInit) {
-    super(input, init)
-    this.nextUrl = new URL(typeof input === 'string' ? input : input.toString())
+const Internal = Symbol.for('NextURLInternal')
+
+class MockNextURL {
+  private _url: URL
+  buildId = ''
+  hasBasePath = false
+  locale = 'en'
+  defaultLocale = 'en'
+  domainLocale = undefined
+  basePath = ''
+
+  readonly [Internal]: { url: URL; options: { locale?: string } } = {
+    url: new URL('http://localhost'),
+    options: { locale: 'en' }
+  }
+
+  constructor(input: string | URL, base?: string | URL) {
+    this._url = new URL(typeof input === 'string' ? input : input.href, base)
+    Object.defineProperty(this, Internal, {
+      enumerable: false,
+      configurable: false,
+      writable: false,
+      value: {
+        url: this._url,
+        options: { locale: 'en' }
+      }
+    })
+  }
+
+  get href() { return this._url.href }
+  get origin() { return this._url.origin }
+  get protocol() { return this._url.protocol }
+  get host() { return this._url.host }
+  get hostname() { return this._url.hostname }
+  get port() { return this._url.port }
+  get pathname() { return this._url.pathname }
+  get search() { return this._url.search }
+  get searchParams() { return this._url.searchParams }
+  get hash() { return this._url.hash }
+
+  analyze() {
+    return {
+      pathname: this.pathname,
+      search: this.search,
+      hash: this.hash
+    }
+  }
+
+  formatPathname() {
+    return this.pathname
+  }
+
+  formatSearch() {
+    return this.search
+  }
+
+  clone() {
+    return new MockNextURL(this._url)
+  }
+
+  toString() {
+    return this._url.toString()
   }
 }
 
-// Мок для NextResponse
-jest.mock('next/server', () => ({
-  NextResponse: {
-    json: (body: any, init?: ResponseInit) => MockResponse.json(body, init)
-  },
-  NextRequest: MockNextRequest
-}))
+export class MockNextRequest extends NextRequest {
+  private _nextUrl: MockNextURL
 
-// Мокаем console.log и console.error
-global.console = {
-  ...console,
-  log: jest.fn(),
-  error: jest.fn(),
+  constructor(url: string | URL, init?: SafeRequestInit) {
+    const cleanInit = {
+      ...init,
+      headers: new Headers(init?.headers || {})
+    }
+    
+    const urlObj = typeof url === 'string' ? new URL(url) : url
+    super(urlObj, cleanInit)
+    this._nextUrl = new MockNextURL(urlObj)
+  }
+
+  get nextUrl() {
+    return this._nextUrl as any // Временное решение для типизации
+  }
 }
 
-// Добавляем моки для process.env
-process.env = {
-  ...process.env,
-  CRON_SECRET: 'test-secret',
-}
+// Глобальные моки
+global.Headers = Headers
+global.Request = Request
+global.Response = MockResponse
+global.TextDecoder = require('util').TextDecoder
+global.TextEncoder = require('util').TextEncoder
+global.fetch = jest.fn(() => 
+  Promise.resolve(new MockResponse(JSON.stringify({ success: true })))
+) as jest.Mock
 
-// Переопределяем глобальные объекты
-global.Response = MockResponse as any
-global.fetch = jest.fn().mockImplementation(() => Promise.resolve(new MockResponse()))
+// Мок для crypto
+Object.defineProperty(global, 'crypto', {
+  value: {
+    subtle: {
+      digest: jest.fn()
+    },
+    getRandomValues: jest.fn()
+  }
+})

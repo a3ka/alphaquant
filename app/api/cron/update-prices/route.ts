@@ -23,25 +23,19 @@ export async function GET(request: NextRequest) {
       await marketService.updateCryptoMetadata()
     } catch (error) {
       console.error('Failed to update crypto metadata:', error)
-      // Продолжаем выполнение даже при ошибке обновления метаданных
     }
 
-    // Получаем номер текущей группы из параметров запроса
     const batchNumber = parseInt(request.nextUrl.searchParams.get('batch') || '0')
-    console.log(`Starting cron job for batch ${batchNumber}...`)
+    const previousTime = parseInt(request.nextUrl.searchParams.get('prevTime') || '0')
     
     const portfolios = await portfolioService.getAllActivePortfolios()
-    console.log('All active portfolios:', portfolios.map(p => p.id))
+    const batchSize = portfolioService.calculateBatchSize(portfolios.length, previousTime)
     
-    const batchSize = 2
     const portfolioBatches = []
-    
     for (let i = 0; i < portfolios.length; i += batchSize) {
-      portfolioBatches.push(portfolios.slice(i, i + batchSize))
+      portfolioBatches.push(portfolios.slice(i, i + batchSize).map(p => p.id))
     }
-    console.log('Portfolio batches:', portfolioBatches.map(batch => batch.map(p => p.id)))
 
-    // Проверяем, существует ли запрошенная группа
     if (batchNumber >= portfolioBatches.length) {
       return NextResponse.json({ 
         success: true,
@@ -50,12 +44,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    const currentBatch = portfolioBatches[batchNumber]
-    console.log(`Processing batch ${batchNumber} with ${currentBatch.length} portfolios`)
-    
     const now = new Date()
-    console.log('Current time:', now.toISOString())
-    
     const force = request.nextUrl.searchParams.get('force')
     const periodsToUpdate = force 
       ? [
@@ -65,89 +54,42 @@ export async function GET(request: NextRequest) {
           ...(force === 'hour24' ? [Period.HOUR_24] : [])
         ]
       : portfolioService.getPeriodsToUpdate(now.getMinutes(), now.getHours())
-    console.log('Periods to update:', periodsToUpdate)
-    
-    const results = await Promise.all(
-      currentBatch.map(async (portfolio) => {
-        try {
-          console.log(`Processing portfolio ${portfolio.id}`)
-          
-          const totalValue = await portfolioService.updatePortfolioData(portfolio.id)
-          console.log(`Portfolio ${portfolio.id} total value:`, totalValue)
-          
-          await Promise.all([
-            portfolioService.deleteCurrentValue(portfolio.id),
-            ...periodsToUpdate.map(async period => {
-              await portfolioService.savePortfolioHistory({
-                portfolioId: portfolio.id,
-                totalValue,
-                period
-              })
-            })
-          ])
 
-          // Возвращаем результат с количеством сохраненных записей
-          return { 
-            success: true, 
-            historyCount: periodsToUpdate.length 
-          }
-        } catch (error) {
-          console.error(`Failed to update portfolio ${portfolio.id}:`, error)
-          return { success: false, historyCount: 0 }
-        }
-      })
+    const result = await portfolioService.processBatch(
+      portfolioBatches[batchNumber],
+      periodsToUpdate,
+      startTime
     )
 
-    const executionTime = Date.now() - startTime
-    console.log('=== Cron job completed ===')
-    console.log('Execution time:', executionTime, 'ms')
-    console.log('Results:', JSON.stringify(results, null, 2))
-
-    const stats = results.reduce((acc, result) => ({
-      updatedPortfolios: acc.updatedPortfolios + (result.success ? 1 : 0),
-      savedHistoryRecords: acc.savedHistoryRecords + result.historyCount
-    }), { updatedPortfolios: 0, savedHistoryRecords: 0 })
-
-    // Запускаем следующую группу
+    // Запускаем следующий батч
     if (batchNumber + 1 < portfolioBatches.length) {
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
-      const nextBatchUrl = `${baseUrl}/api/cron/update-prices?batch=${batchNumber + 1}`
-      console.log(`Triggering next batch: ${nextBatchUrl}`)
-      
-      try {
-        const response = await fetch(nextBatchUrl, {
-          method: 'GET',
-          headers: { 
-            'Authorization': `Bearer ${process.env.CRON_SECRET}`
-          }
-        })
-        
-        if (!response.ok) {
-          console.error(`Failed to trigger next batch: ${response.status} ${response.statusText}`)
-          const errorText = await response.text()
-          console.error('Error details:', errorText)
-        } else {
-          console.log('Next batch triggered successfully')
-        }
-      } catch (error) {
-        console.error('Error triggering next batch:', error)
-      }
+      await portfolioService.triggerNextBatch(
+        baseUrl,
+        batchNumber,
+        result.executionTime || 0,
+        process.env.CRON_SECRET!
+      )
     }
 
-    return NextResponse.json({ 
-      success: true,
-      message: `Batch ${batchNumber} processed successfully`,
+    return NextResponse.json({
+      success: result.success,
       stats: {
-        totalPortfolios: portfolios.length,
-        currentBatchSize: currentBatch.length,
+        batchNumber,
+        batchSize,
+        totalBatches: portfolioBatches.length,
         remainingBatches: portfolioBatches.length - batchNumber - 1,
-        ...stats
+        ...result
       }
     })
-  } catch (error: any) {
+
+  } catch (error) {
     console.error('Cron job failed:', error)
     return NextResponse.json(
-      { error: error.message },
+      { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stats: { executionTime: Date.now() - startTime }
+      },
       { status: 500 }
     )
   }

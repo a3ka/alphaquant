@@ -185,4 +185,18 @@ export interface Asset {
     mutate: () => Promise<void>
   }
   
+  export interface BatchResult {
+    success: boolean
+    updatedPortfolios: number
+    savedHistoryRecords: number
+    errors?: string[]
+    executionTime?: number
+  }
+  
+  export interface PortfolioUpdateResult {
+    success: boolean
+    historyCount: number
+    error?: string
+  }
+  
   

@@ -1,8 +1,13 @@
 import { createServerSupabaseClient } from '@/src/services/supabase/server'
-import type { Portfolio, UserPortfolio, PortfolioHistory, PortfolioBalancesResponse, PortfolioId, PortfolioBalance, EnrichedPortfolioBalance, CoinMetadata } from '@/src/types/portfolio.types'
+import type { Portfolio, UserPortfolio, PortfolioHistory, PortfolioBalancesResponse, PortfolioId, PortfolioBalance, EnrichedPortfolioBalance, CoinMetadata, PortfolioUpdateResult, BatchResult } from '@/src/types/portfolio.types'
 import { Period } from '@/src/types/portfolio.types'
 import { marketService } from './market'
 import { getPeriodByRange, getStartDate } from '@/src/utils/date'
+
+// Добавляем в начало файла константы
+const MIN_BATCH_SIZE = 2
+const MAX_BATCH_SIZE = 50
+const TARGET_EXECUTION_TIME = 5000
 
 // Все существующие методы из portfolio-actions.ts
 export const portfolioService = {
@@ -439,6 +444,109 @@ export const portfolioService = {
     } catch (error: any) {
       console.error('Failed to delete current value:', error)
       throw new Error(error.message)
+    }
+  },
+
+  calculateBatchSize(totalPortfolios: number, previousExecutionTime?: number): number {
+    if (!previousExecutionTime) {
+      return Math.min(
+        Math.max(Math.ceil(totalPortfolios * 0.05), MIN_BATCH_SIZE),
+        MAX_BATCH_SIZE
+      )
+    }
+
+    return Math.min(
+      Math.max(
+        Math.ceil((TARGET_EXECUTION_TIME / previousExecutionTime) * MIN_BATCH_SIZE),
+        MIN_BATCH_SIZE
+      ),
+      MAX_BATCH_SIZE
+    )
+  },
+
+  async processBatch(
+    portfolioIds: number[], 
+    periods: Period[],
+    startTime: number
+  ): Promise<BatchResult> {
+    const results: PortfolioUpdateResult[] = []
+    const errors: string[] = []
+
+    for (const portfolioId of portfolioIds) {
+      try {
+        const totalValue = await this.updatePortfolioData(portfolioId)
+        
+        await Promise.all([
+          this.deleteCurrentValue(portfolioId),
+          ...periods.map(period => 
+            this.savePortfolioHistory({
+              portfolioId,
+              totalValue,
+              period
+            })
+          )
+        ])
+        
+        results.push({ 
+          success: true, 
+          historyCount: periods.length 
+        })
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        console.error(`Error processing portfolio ${portfolioId}:`, errorMessage)
+        errors.push(`Portfolio ${portfolioId}: ${errorMessage}`)
+        results.push({ 
+          success: false, 
+          historyCount: 0,
+          error: errorMessage
+        })
+      }
+    }
+
+    const stats = results.reduce((acc, result) => ({
+      updatedPortfolios: acc.updatedPortfolios + (result.success ? 1 : 0),
+      savedHistoryRecords: acc.savedHistoryRecords + result.historyCount
+    }), { 
+      updatedPortfolios: 0, 
+      savedHistoryRecords: 0 
+    })
+
+    return {
+      success: errors.length === 0,
+      ...stats,
+      errors: errors.length > 0 ? errors : undefined,
+      executionTime: Date.now() - startTime
+    }
+  },
+
+  async triggerNextBatch(
+    baseUrl: string, 
+    batchNumber: number, 
+    executionTime: number,
+    authToken: string
+  ): Promise<boolean> {
+    const nextBatchUrl = new URL(`${baseUrl}/api/cron/update-prices`)
+    nextBatchUrl.searchParams.set('batch', (batchNumber + 1).toString())
+    nextBatchUrl.searchParams.set('prevTime', executionTime.toString())
+    
+    try {
+      const response = await fetch(nextBatchUrl.toString(), {
+        method: 'GET',
+        headers: { 
+          'Authorization': `Bearer ${authToken}`
+        }
+      })
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`${response.status} ${response.statusText}: ${errorText}`)
+      }
+      
+      console.log('Next batch triggered successfully')
+      return true
+    } catch (error) {
+      console.error('Failed to trigger next batch:', error)
+      return false
     }
   }
 }
