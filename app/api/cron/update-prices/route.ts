@@ -31,12 +31,15 @@ export async function GET(request: NextRequest) {
     console.log(`Starting cron job for batch ${batchNumber}...`)
     
     const portfolios = await portfolioService.getAllActivePortfolios()
+    console.log('All active portfolios:', portfolios.map(p => p.id))
+    
     const batchSize = 2
     const portfolioBatches = []
     
     for (let i = 0; i < portfolios.length; i += batchSize) {
       portfolioBatches.push(portfolios.slice(i, i + batchSize))
     }
+    console.log('Portfolio batches:', portfolioBatches.map(batch => batch.map(p => p.id)))
 
     // Проверяем, существует ли запрошенная группа
     if (batchNumber >= portfolioBatches.length) {
@@ -111,14 +114,24 @@ export async function GET(request: NextRequest) {
       const nextBatchUrl = `${baseUrl}/api/cron/update-prices?batch=${batchNumber + 1}`
       console.log(`Triggering next batch: ${nextBatchUrl}`)
       
-      // Используем абсолютный URL и добавляем метод
-      await fetch(nextBatchUrl, {
-        method: 'GET',
-        headers: { 
-          'Authorization': expectedAuth,
-          'Content-Type': 'application/json'
+      try {
+        const response = await fetch(nextBatchUrl, {
+          method: 'GET',
+          headers: { 
+            'Authorization': expectedAuth
+          }
+        })
+        
+        if (!response.ok) {
+          console.error(`Failed to trigger next batch: ${response.status} ${response.statusText}`)
+          const errorText = await response.text()
+          console.error('Error details:', errorText)
+        } else {
+          console.log('Next batch triggered successfully')
         }
-      })
+      } catch (error) {
+        console.error('Error triggering next batch:', error)
+      }
     }
 
     return NextResponse.json({ 
