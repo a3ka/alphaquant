@@ -528,13 +528,11 @@ export const portfolioService = {
     const nextBatchUrl = new URL(`${baseUrl}/api/cron/update-prices`)
     nextBatchUrl.searchParams.set('batch', (batchNumber + 1).toString())
     nextBatchUrl.searchParams.set('prevTime', executionTime.toString())
+    nextBatchUrl.searchParams.set('token', authToken)
     
     try {
       const response = await fetch(nextBatchUrl.toString(), {
-        method: 'GET',
-        headers: { 
-          'Authorization': authToken
-        }
+        method: 'GET'
       })
       
       if (!response.ok) {

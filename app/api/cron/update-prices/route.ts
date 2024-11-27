@@ -9,9 +9,10 @@ export async function GET(request: NextRequest) {
   
   try {
     const authHeader = request.headers.get('Authorization')
+    const tokenParam = request.nextUrl.searchParams.get('token')
     const expectedAuth = `Bearer ${process.env.CRON_SECRET}`
 
-    if (authHeader !== expectedAuth) {
+    if (authHeader !== expectedAuth && tokenParam !== process.env.CRON_SECRET) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
