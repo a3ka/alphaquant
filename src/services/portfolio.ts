@@ -532,10 +532,7 @@ export const portfolioService = {
     
     try {
       const response = await fetch(nextBatchUrl.toString(), {
-        method: 'GET',
-        headers: { 
-          'Authorization': `Bearer ${authToken}`
-        }
+        method: 'GET'
       })
       
       if (!response.ok) {
