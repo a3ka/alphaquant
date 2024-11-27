@@ -27,43 +27,64 @@ export const marketService = {
       
       const supabase = await createServerSupabaseClient()
       
-      // Получаем существующие монеты из БД
+      // Получаем существующие монеты
       const { data: existingCoins } = await supabase
         .from('crypto_metadata')
         .select('coin_id, symbol')
 
-      // Создаем Set существующих coin_id для быстрого поиска
       const existingCoinIds = new Set(existingCoins?.map(coin => coin.coin_id) || [])
       const existingSymbols = new Set(existingCoins?.map(coin => coin.symbol) || [])
 
-      // Фильтруем только новые монеты или те, которых нет в БД
-      const updates = result
-        .filter((coin: CoinMarketData) => {
-          const baseSymbol = coin.symbol.toUpperCase().split('.')[0];
-          return !existingCoinIds.has(coin.id) && 
-                 !existingSymbols.has(coin.symbol.toUpperCase()) &&
-                 !['USDT', 'USDC'].includes(baseSymbol);
-        })
-        .map((coin: CoinMarketData) => ({
-          coin_id: coin.id,
-          symbol: coin.symbol.toUpperCase(),
-          name: coin.name,
-          logo: coin.image,
-          market_cap_rank: coin.market_cap_rank,
-          current_price: coin.current_price,
-          price_change_24h: coin.price_change_percentage_24h,
-          ath: coin.ath,
-          ath_date: coin.ath_date,
-          last_updated: new Date().toISOString()
-        }))
+      // Разделяем на новые и существующие монеты
+      const { newCoins, existingUpdates } = result.reduce((acc: any, coin: CoinMarketData) => {
+        const baseSymbol = coin.symbol.toUpperCase().split('.')[0]
+        if (['USDT', 'USDC'].includes(baseSymbol)) return acc
 
-      if (updates.length > 0) {
-        const { error } = await supabase
+        if (existingCoinIds.has(coin.id) || existingSymbols.has(coin.symbol.toUpperCase())) {
+          // Обновление существующей монеты
+          acc.existingUpdates.push({
+            coin_id: coin.id,
+            current_price: coin.current_price,
+            price_change_24h: coin.price_change_percentage_24h,
+            market_cap_rank: coin.market_cap_rank,
+            last_updated: new Date().toISOString()
+          })
+        } else {
+          // Новая монета
+          acc.newCoins.push({
+            coin_id: coin.id,
+            symbol: coin.symbol.toUpperCase(),
+            name: coin.name,
+            logo: coin.image,
+            market_cap_rank: coin.market_cap_rank,
+            current_price: coin.current_price,
+            price_change_24h: coin.price_change_percentage_24h,
+            ath: coin.ath,
+            ath_date: coin.ath_date,
+            last_updated: new Date().toISOString()
+          })
+        }
+        return acc
+      }, { newCoins: [], existingUpdates: [] })
+
+      // Обновляем существующие монеты
+      for (const update of existingUpdates) {
+        await supabase
           .from('crypto_metadata')
-          .upsert(updates, { onConflict: 'coin_id' })
-
-        if (error) throw error
+          .update(update)
+          .eq('coin_id', update.coin_id)
       }
+
+      // Добавляем новые монеты
+      if (newCoins.length > 0) {
+        await supabase
+          .from('crypto_metadata')
+          .insert(newCoins)
+      }
+
+      console.log(`Updated ${existingUpdates.length} coins, added ${newCoins.length} new coins`)
+      return { updated: existingUpdates.length, added: newCoins.length }
+      
     } catch (error) {
       console.error('Failed to update crypto metadata:', error)
       throw error
