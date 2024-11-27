@@ -106,7 +106,7 @@ export interface Asset {
     id: number
     portfolio_id: number
     total_value: number
-    timestamp: Date
+    timestamp: string
     period: Period
   }
   
@@ -139,6 +139,7 @@ export interface Asset {
   export interface ChartDataPoint {
     date: string
     value: number
+    period: Period
   }
   
   export interface PortfolioChartsProps {

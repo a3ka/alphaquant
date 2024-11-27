@@ -1,5 +1,5 @@
 // Перенести сюда все initialAssets и portfolioData
-import { Asset, DemoPortfolio, TimeRangeType } from '@/src/types/portfolio.types'
+import { Asset, ChartDataPoint,Period,  DemoPortfolio, TimeRangeType } from '@/src/types/portfolio.types'
 
 export const initialAssets: Asset[] = [
   { 
@@ -169,48 +169,50 @@ export const FakePortfolio: DemoPortfolio = {
 // Функция для генерации данных в зависимости от временного диапазона
 export const generateDataForTimeRange = (range: TimeRangeType) => {
   const now = new Date()
-  const data = []
+  const data: ChartDataPoint[] = []
   let startDate: Date
   let interval: number
+  let period: Period
   
   switch (range) {
     case '24H':
       startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-      interval = 60 * 60 * 1000 // кд час
+      interval = 60 * 60 * 1000 // каждый час
+      period = Period.MINUTE_15
       break
     case '1W':
       startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
       interval = 24 * 60 * 60 * 1000 // каждый день
+      period = Period.HOUR_1
       break
     case '1M':
       startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
       interval = 24 * 60 * 60 * 1000 // каждый день
+      period = Period.HOUR_4
       break
     case '3M':
-      startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
-      interval = 7 * 24 * 60 * 60 * 1000 // кажня неделя
-      break
     case '6M':
-      startDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000)
-      interval = 14 * 24 * 60 * 60 * 1000 // кажды две недели
-      break
     case '1Y':
-      startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
-      interval = 30 * 24 * 60 * 60 * 1000 // каждый месяц
+      startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+      interval = 7 * 24 * 60 * 60 * 1000 // каждая неделя
+      period = Period.HOUR_24
       break
     case 'ALL':
-      return portfolioChartData // используем данные из импорта
+      return portfolioChartData.map(point => ({
+        ...point,
+        period: Period.HOUR_24
+      }))
   }
 
   for (let date = startDate; date <= now; date = new Date(date.getTime() + interval)) {
-    // Генерируем значение с некоторой случайностью, но с общим трендом
     const baseValue = 300000
     const randomFactor = Math.random() * 50000 - 25000
     const trendFactor = ((date.getTime() - startDate.getTime()) / (now.getTime() - startDate.getTime())) * 50000
     
     data.push({
       date: date.toISOString(),
-      value: baseValue + randomFactor + trendFactor
+      value: baseValue + randomFactor + trendFactor,
+      period
     })
   }
   

@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { PortfolioCharts } from './PortfolioCharts'
 import { PortfolioTable } from './PortfolioTable'
 import { EmptyPortfolioState } from './EmptyPortfolioState'
+import { usePortfolioValueMetrics } from '@/src/hooks/portfolio/usePortfolioValueMetrics'
 
 export function MainContent() {
   const { user } = useUser()
@@ -29,6 +30,12 @@ export function MainContent() {
     isLoading: chartLoading,
     mutate: mutateChart 
   } = usePortfolioHistory(selectedPortfolio, timeRange)
+
+  const { totalValue, totalProfit, profitPercentage } = usePortfolioValueMetrics(
+    selectedPortfolio,
+    assets || [],
+    chartData || []
+  )
 
   const currentSelectedAsset = selectedAsset
   const isLoading = chartLoading || !assets
@@ -103,13 +110,6 @@ export function MainContent() {
     if (risk < 60) return 'bg-yellow-500'
     return 'bg-red-500'
   }
-
-  const totalValue = assets?.reduce((sum, asset) => sum + asset.value, 0) || 0;
-
-  // Получаем предыдущее значение из истории (15 минут назад)
-  const previousValue = chartData?.[chartData.length - 2]?.value || totalValue;
-  const totalProfit = totalValue - previousValue;
-  const profitPercentage = (totalProfit / previousValue) * 100;
 
   return (
     <main className="w-full bg-[#010714] rounded-lg border border-gray-400">
