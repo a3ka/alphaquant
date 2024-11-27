@@ -528,18 +528,13 @@ export const portfolioService = {
     const nextBatchUrl = new URL(`${baseUrl}/api/cron/update-prices`)
     nextBatchUrl.searchParams.set('batch', (batchNumber + 1).toString())
     nextBatchUrl.searchParams.set('prevTime', executionTime.toString())
-    nextBatchUrl.searchParams.set('token', authToken)
-    
-    console.log('Triggering next batch with URL:', nextBatchUrl.toString())
-    console.log('Auth token:', authToken)
     
     try {
       const response = await fetch(nextBatchUrl.toString(), {
-        method: 'GET'
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
       })
-      
-      console.log('Response status:', response.status)
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()))
       
       if (!response.ok) {
         const errorText = await response.text()
@@ -548,7 +543,6 @@ export const portfolioService = {
         throw new Error(`${response.status} ${response.statusText}: ${errorText}`)
       }
       
-      console.log('Next batch triggered successfully')
       return true
     } catch (error) {
       console.error('Failed to trigger next batch:', error)
