@@ -539,6 +539,8 @@ export const portfolioService = {
       
       if (!response.ok) {
         const errorText = await response.text()
+        console.error(`Failed to trigger next batch: ${response.status} ${response.statusText}`)
+        console.error('Error details:', errorText)
         throw new Error(`${response.status} ${response.statusText}: ${errorText}`)
       }
       
