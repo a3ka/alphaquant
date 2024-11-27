@@ -536,6 +536,7 @@ export const portfolioService = {
     const nextBatchUrl = new URL('/api/cron/update-prices', baseUrl)
     nextBatchUrl.searchParams.set('batch', (batchNumber + 1).toString())
     nextBatchUrl.searchParams.set('prevTime', executionTime.toString())
+    nextBatchUrl.searchParams.set('token', authToken)
     
     try {
       console.log('Triggering next batch:', {

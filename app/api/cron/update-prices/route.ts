@@ -28,6 +28,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    console.log('Auth check:', {
+      authHeader,
+      tokenParam,
+      expectedToken: process.env.CRON_SECRET
+    })
+
     // Обновляем метаданные в начале
     try {
       await marketService.updateCryptoMetadata()

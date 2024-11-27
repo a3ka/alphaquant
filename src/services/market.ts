@@ -17,6 +17,31 @@ interface CoinMarketData {
 
 const DEFAULT_COIN_LOGO = 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png'
 
+interface RequiredCoinFields extends CoinMarketData {
+  id: string
+  symbol: string
+  name: string
+  current_price: number
+  market_cap_rank: number
+}
+
+function hasRequiredFields(coin: CoinMarketData): coin is RequiredCoinFields {
+  if (!coin.id || !coin.symbol || !coin.name || 
+      typeof coin.current_price !== 'number' || 
+      typeof coin.market_cap_rank !== 'number') {
+    console.warn('Coin missing required fields:', {
+      id: !!coin.id,
+      symbol: !!coin.symbol,
+      name: !!coin.name,
+      current_price: typeof coin.current_price === 'number',
+      market_cap_rank: typeof coin.market_cap_rank === 'number',
+      coin
+    })
+    return false
+  }
+  return true
+}
+
 export const marketService = {
   async updateCryptoMetadata() {
     try {
@@ -37,18 +62,17 @@ export const marketService = {
 
       // Разделяем на новые и существующие монеты
       const { newCoins, existingUpdates } = result.reduce((acc: any, coin: CoinMarketData) => {
+        if (!hasRequiredFields(coin)) return acc
+        
         const baseSymbol = coin.symbol.toUpperCase().split('.')[0]
         if (['USDT', 'USDC'].includes(baseSymbol)) return acc
 
         if (existingCoinIds.has(coin.id) || existingSymbols.has(coin.symbol.toUpperCase())) {
           // Обновление существующей монеты
-          if (!coin.id || !coin.symbol) {
-            console.warn('Skipping coin with missing required fields:', coin)
-            return acc
-          }
           acc.existingUpdates.push({
             coin_id: coin.id,
             symbol: coin.symbol.toUpperCase(),
+            name: coin.name,
             current_price: coin.current_price,
             price_change_24h: coin.price_change_percentage_24h,
             market_cap_rank: coin.market_cap_rank,
