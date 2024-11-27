@@ -12,11 +12,13 @@ export async function GET(request: NextRequest) {
     const tokenParam = request.nextUrl.searchParams.get('token')
     const expectedAuth = `Bearer ${process.env.CRON_SECRET}`
 
-    if (authHeader !== expectedAuth && tokenParam !== process.env.CRON_SECRET) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    if (authHeader !== expectedAuth) {
+      if (authHeader !== expectedAuth && tokenParam !== process.env.CRON_SECRET) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
     }
 
     // Обновляем метаданные в начале

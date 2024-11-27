@@ -530,10 +530,16 @@ export const portfolioService = {
     nextBatchUrl.searchParams.set('prevTime', executionTime.toString())
     nextBatchUrl.searchParams.set('token', authToken)
     
+    console.log('Triggering next batch with URL:', nextBatchUrl.toString())
+    console.log('Auth token:', authToken)
+    
     try {
       const response = await fetch(nextBatchUrl.toString(), {
         method: 'GET'
       })
+      
+      console.log('Response status:', response.status)
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()))
       
       if (!response.ok) {
         const errorText = await response.text()
