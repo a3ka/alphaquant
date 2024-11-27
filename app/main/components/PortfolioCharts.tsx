@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { ArrowUp } from 'lucide-react'
+import { ArrowDown, ArrowUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Line, LineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Sector, ReferenceLine } from "recharts"
@@ -28,7 +28,10 @@ export function PortfolioCharts({
   formatDate,
   onPortfolioChange,
   setIsAddTransactionOpen,
-  selectedPortfolio
+  selectedPortfolio,
+  totalValue,
+  totalProfit,
+  profitPercentage
 }: PortfolioChartsProps) {
   useEffect(() => {
     if (!currentSelectedAsset && processedPieChartData.length > 0) {
@@ -110,11 +113,13 @@ export function PortfolioCharts({
         />
       </CardHeader>
       <CardContent>
-        <div className="mb-6">
-          <div className="text-3xl font-bold text-white">$299441.37</div>
-          <div className="flex items-center text-[#4ADE80]">
-            <ArrowUp className="h-4 w-4 mr-1" />
-            1.75% ($5143.97)
+      <div className="mb-6">
+        <div className="text-3xl font-bold text-white">
+          ${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+          </div>
+          <div className={`flex items-center ${profitPercentage >= 0 ? 'text-[#4ADE80]' : 'text-red-500'}`}>
+            {profitPercentage >= 0 ? <ArrowUp className="h-4 w-4 mr-1" /> : <ArrowDown className="h-4 w-4 mr-1" />}
+            {profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(2)}% (${totalProfit >= 0 ? '+' : ''}{totalProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})})
           </div>
         </div>
 

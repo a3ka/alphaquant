@@ -124,8 +124,8 @@ export interface Asset {
   export interface AssetsDataReturn {
     assets: Asset[]
     pieChartData: PieChartDataItem[]
-    selectedAsset: Asset | null
-    setSelectedAsset: (asset: Asset | null) => void
+    selectedAsset: Asset | undefined
+    setSelectedAsset: (asset: Asset | undefined) => void
     isEmpty: boolean
     error: string | null
     mutate: () => Promise<void>
@@ -144,11 +144,11 @@ export interface Asset {
   export interface PortfolioChartsProps {
     timeRange: TimeRangeType
     setTimeRange: (range: TimeRangeType) => void
-    portfolioData: ChartDataPoint[] | undefined
+    portfolioData: ChartDataPoint[]
     pieChartData: PieChartDataItem[]
     assets: Asset[]
-    currentSelectedAsset: Asset | null
-    setSelectedAsset: (asset: Asset | null) => void
+    currentSelectedAsset: Asset | undefined
+    setSelectedAsset: (asset: Asset) => void
     portfolioRisk: number
     getRiskColor: (risk: number) => string
     formatYAxis: (value: number) => string
@@ -156,6 +156,9 @@ export interface Asset {
     onPortfolioChange: (portfolio: Portfolio) => void
     setIsAddTransactionOpen: (isOpen: boolean) => void
     selectedPortfolio: Portfolio | undefined
+    totalValue: number
+    totalProfit: number
+    profitPercentage: number
   }
   
   export interface CoinMetadata {

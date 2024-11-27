@@ -9,8 +9,8 @@ interface PortfolioTableProps {
   assets: Asset[]
   isAddTransactionOpen: boolean
   setIsAddTransactionOpen: (value: boolean) => void
-  currentSelectedAsset?: Asset | null
-  setSelectedAsset?: (asset: Asset | null) => void
+  currentSelectedAsset?: Asset | undefined
+  setSelectedAsset?: (asset: Asset | undefined) => void
 }
 
 export function PortfolioTable({

@@ -104,6 +104,13 @@ export function MainContent() {
     return 'bg-red-500'
   }
 
+  const totalValue = assets?.reduce((sum, asset) => sum + asset.value, 0) || 0;
+
+  // Получаем предыдущее значение из истории (15 минут назад)
+  const previousValue = chartData?.[chartData.length - 2]?.value || totalValue;
+  const totalProfit = totalValue - previousValue;
+  const profitPercentage = (totalProfit / previousValue) * 100;
+
   return (
     <main className="w-full bg-[#010714] rounded-lg border border-gray-400">
       <Card className="bg-transparent">
@@ -124,6 +131,9 @@ export function MainContent() {
               onPortfolioChange={handlePortfolioChange}
               setIsAddTransactionOpen={setIsAddTransactionOpen}
               selectedPortfolio={selectedPortfolio}
+              totalValue={totalValue}
+              totalProfit={totalProfit}
+              profitPercentage={profitPercentage}
             />
 
             <PortfolioTable 

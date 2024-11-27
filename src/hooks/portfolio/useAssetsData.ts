@@ -9,7 +9,7 @@ import { marketService } from '@/src/services/market'
 
 export const useAssetsData = (selectedPortfolio: Portfolio | undefined): AssetsDataReturn => {
   const [assets, setAssets] = useState<Asset[]>([])
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
+  const [selectedAsset, setSelectedAsset] = useState<Asset | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
 
   const loadAssets = async () => {
