@@ -207,12 +207,28 @@ export const portfolioService = {
         })
         .select()
       
+      console.log('Insert response:', {
+        success: !error,
+        error,
+        data: insertedData,
+        rawResponse: JSON.stringify(insertedData)
+      })
+      
       if (error) {
         console.error('Failed to save portfolio history:', error)
         throw error
       }
       
       console.log('Portfolio history saved successfully:', insertedData)
+
+      const { data: checkData } = await supabase
+        .from("portfolio_history")
+        .select()
+        .eq("id", insertedData[0].id)
+        .single()
+
+      console.log('Verification query:', checkData)
+
       return insertedData
     } catch (error) {
       console.error('Error in savePortfolioHistory:', error)
