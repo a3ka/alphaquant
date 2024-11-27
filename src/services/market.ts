@@ -42,8 +42,13 @@ export const marketService = {
 
         if (existingCoinIds.has(coin.id) || existingSymbols.has(coin.symbol.toUpperCase())) {
           // Обновление существующей монеты
+          if (!coin.id || !coin.symbol) {
+            console.warn('Skipping coin with missing required fields:', coin)
+            return acc
+          }
           acc.existingUpdates.push({
             coin_id: coin.id,
+            symbol: coin.symbol.toUpperCase(),
             current_price: coin.current_price,
             price_change_24h: coin.price_change_percentage_24h,
             market_cap_rank: coin.market_cap_rank,
