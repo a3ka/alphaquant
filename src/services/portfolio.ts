@@ -525,19 +525,18 @@ export const portfolioService = {
     executionTime: number,
     authToken: string
   ): Promise<boolean> {
-    const nextBatchUrl = new URL(`${baseUrl}/api/cron/update-prices`)
+    const nextBatchUrl = new URL('/api/cron/update-prices', baseUrl)
     nextBatchUrl.searchParams.set('batch', (batchNumber + 1).toString())
     nextBatchUrl.searchParams.set('prevTime', executionTime.toString())
     
     try {
-      const response = await fetch(nextBatchUrl.toString(), {
+      const response = await fetch('/api/cron/update-prices?' + nextBatchUrl.searchParams.toString(), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'Accept': 'application/json',
           'Content-Type': 'application/json'
-        },
-        credentials: 'include'
+        }
       })
       
       if (!response.ok) {
