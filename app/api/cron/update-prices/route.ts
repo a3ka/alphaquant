@@ -74,12 +74,17 @@ export async function GET(request: NextRequest) {
     // Запускаем следующий батч
     if (batchNumber + 1 < portfolioBatches.length) {
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
-      await portfolioService.triggerNextBatch(
-        baseUrl,
-        batchNumber,
-        result.executionTime || 0,
-        process.env.CRON_SECRET!
-      )
+      try {
+        const nextBatchSuccess = await portfolioService.triggerNextBatch(
+          baseUrl,
+          batchNumber,
+          result.executionTime || 0,
+          process.env.CRON_SECRET!
+        )
+        console.log('Next batch triggered:', { success: nextBatchSuccess, batchNumber: batchNumber + 1 })
+      } catch (error) {
+        console.error('Failed to trigger next batch:', error)
+      }
     }
 
     return NextResponse.json({

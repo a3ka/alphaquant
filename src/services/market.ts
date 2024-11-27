@@ -67,19 +67,24 @@ export const marketService = {
         return acc
       }, { newCoins: [], existingUpdates: [] })
 
-      // Обновляем существующие монеты
-      for (const update of existingUpdates) {
-        await supabase
+      // Обновляем все существующие монеты одним запросом
+      if (existingUpdates.length > 0) {
+        const { error } = await supabase
           .from('crypto_metadata')
-          .update(update)
-          .eq('coin_id', update.coin_id)
+          .upsert(existingUpdates, {
+            onConflict: 'coin_id'
+          })
+
+        if (error) throw error
       }
 
-      // Добавляем новые монеты
+      // Добавляем все новые монеты одним запросом
       if (newCoins.length > 0) {
-        await supabase
+        const { error } = await supabase
           .from('crypto_metadata')
           .insert(newCoins)
+
+        if (error) throw error
       }
 
       console.log(`Updated ${existingUpdates.length} coins, added ${newCoins.length} new coins`)
