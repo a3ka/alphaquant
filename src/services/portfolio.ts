@@ -171,45 +171,53 @@ export const portfolioService = {
     totalValue: number
     period: Period
   }) {
-    console.log('Saving portfolio history:', {
-      portfolioId: data.portfolioId,
-      totalValue: data.totalValue,
-      period: data.period,
-      timestamp: new Date().toISOString()
-    })
-    
-    const supabase = await createServerSupabaseClient()
-
-    // Если сохраняем CURRENT запись, сначала удаляем предыдущую
-    if (data.period === Period.CURRENT) {
-      const { error: deleteError } = await supabase
-        .from("portfolio_history")
-        .delete()
-        .eq("portfolio_id", data.portfolioId)
-        .eq("period", Period.CURRENT)
-
-      if (deleteError) {
-        console.error('Failed to delete previous CURRENT record:', deleteError)
-        throw deleteError
-      }
-    }
-    
-    // Сохраняем новую запись
-    const { error } = await supabase
-      .from("portfolio_history")
-      .insert({
-        portfolio_id: data.portfolioId,
-        total_value: data.totalValue,
+    try {
+      console.log('Starting savePortfolioHistory:', {
+        portfolioId: data.portfolioId,
+        totalValue: data.totalValue,
         period: data.period,
         timestamp: new Date().toISOString()
       })
-    
-    if (error) {
-      console.error('Failed to save portfolio history:', error)
+      
+      const supabase = await createServerSupabaseClient()
+
+      // Если сохраняем CURRENT запись, сначала удаляем предыдущую
+      if (data.period === Period.CURRENT) {
+        console.log('Deleting previous CURRENT record')
+        const { error: deleteError } = await supabase
+          .from("portfolio_history")
+          .delete()
+          .eq("portfolio_id", data.portfolioId)
+          .eq("period", Period.CURRENT)
+
+        if (deleteError) {
+          console.error('Failed to delete previous CURRENT record:', deleteError)
+          throw deleteError
+        }
+      }
+      
+      console.log('Inserting new portfolio history record')
+      const { data: insertedData, error } = await supabase
+        .from("portfolio_history")
+        .insert({
+          portfolio_id: data.portfolioId,
+          total_value: data.totalValue,
+          period: data.period,
+          timestamp: new Date().toISOString()
+        })
+        .select()
+      
+      if (error) {
+        console.error('Failed to save portfolio history:', error)
+        throw error
+      }
+      
+      console.log('Portfolio history saved successfully:', insertedData)
+      return insertedData
+    } catch (error) {
+      console.error('Error in savePortfolioHistory:', error)
       throw error
     }
-    
-    console.log('Portfolio history saved successfully')
   },
 
   async getPortfolioBalances(portfolioId: string): Promise<PortfolioBalancesResponse> {

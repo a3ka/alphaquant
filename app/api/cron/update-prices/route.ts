@@ -5,7 +5,11 @@ import { Period } from '@/src/types/portfolio.types'
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
-  console.log('=== Starting update-prices cron job ===')
+  console.log('=== Starting update-prices cron job ===', {
+    time: new Date().toISOString(),
+    url: request.url,
+    headers: Object.fromEntries(request.headers)
+  })
   
   try {
     const authHeader = request.headers.get('Authorization')
