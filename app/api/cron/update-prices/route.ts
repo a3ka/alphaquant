@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
         baseUrl,
         batchNumber,
         result.executionTime || 0,
-        `Bearer ${process.env.CRON_SECRET!}`
+        process.env.CRON_SECRET!
       )
     }
 
