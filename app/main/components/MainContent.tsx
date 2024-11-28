@@ -65,6 +65,9 @@ export function MainContent() {
         ])
       }
       
+      // Сбрасываем выбранный актив при смене портфеля
+      setSelectedAsset(undefined)
+      
       // Устанавливаем новый портфель
       setSelectedPortfolio(portfolio)
       setSelectedPortfolioId(portfolio.id.toString())
@@ -77,7 +80,7 @@ export function MainContent() {
     } catch (error) {
       console.error('Failed to update portfolio data:', error)
     }
-  }, [selectedPortfolio, mutateAssets, mutateChart])
+  }, [selectedPortfolio, mutateAssets, mutateChart, setSelectedAsset])
 
   // Инициализация первого портфеля
   useEffect(() => {

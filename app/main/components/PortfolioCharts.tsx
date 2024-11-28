@@ -21,6 +21,30 @@ import { Button } from "@/components/ui/button"
 import { Plus } from 'lucide-react'
 import { FakePortfolio } from '@/app/data/fakePortfolio'
 
+const generateUniqueColors = (count: number) => {
+  const baseHues = [
+    340, // красный
+    280, // фиолетовый
+    220, // синий
+    180, // голубой
+    130, // зеленый
+    45,  // оранжевый
+    0    // красный (другой оттенок)
+  ];
+  
+  const colors: string[] = [];
+  const saturation = 65;
+  const lightness = 60;
+  
+  for (let i = 0; i < count; i++) {
+    const hue = baseHues[i % baseHues.length];
+    // Добавляем небольшое смещение для каждого следующего цвета
+    const adjustedHue = (hue + (Math.floor(i / baseHues.length) * 20)) % 360;
+    colors.push(`hsl(${adjustedHue}, ${saturation}%, ${lightness}%)`);
+  }
+  
+  return colors;
+};
 
 export function PortfolioCharts({
   timeRange,
@@ -41,39 +65,74 @@ export function PortfolioCharts({
   totalProfit,
   profitPercentage
 }: PortfolioChartsProps) {
+  if (!portfolioData?.length || !initialPieChartData?.length) {
+    return (
+      <Card className="bg-transparent border-0">
+        <CardHeader>
+          <div className="flex justify-between items-center mb-4">
+            <CardTitle className="text-white text-xl font-semibold">Portfolio Overview</CardTitle>
+            <Button 
+              variant="outline" 
+              className="bg-[#1F2937] text-white hover:bg-[#374151] border-gray-700"
+              onClick={() => setIsAddTransactionOpen(true)}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Transaction
+            </Button>
+          </div>
+          <PortfolioSelector 
+            onPortfolioChange={onPortfolioChange}
+            externalSelectedPortfolio={selectedPortfolio || FakePortfolio}
+          />
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[500px] text-gray-400">
+          No data available. Add some transactions to see portfolio analytics.
+        </CardContent>
+      </Card>
+    );
+  }
+
   const processedPieChartData = useMemo(() => {
     if (!initialPieChartData?.length) return [];
     
     const sortedData = [...initialPieChartData].sort((a, b) => b.percentage - a.percentage);
     const topAssets = sortedData.slice(0, 7);
     
-    if (sortedData.length <= 7) return topAssets;
+    const uniqueColors = generateUniqueColors(topAssets.length + 1); // +1 для "Other"
+    
+    const coloredTopAssets = topAssets.map((asset, index) => ({
+      ...asset,
+      color: uniqueColors[index]
+    }));
+    
+    if (sortedData.length <= 7) return coloredTopAssets;
     
     const otherAssets = sortedData.slice(7);
     const otherValue = otherAssets.reduce((sum, asset) => sum + asset.value, 0);
     const otherPercentage = otherAssets.reduce((sum, asset) => sum + asset.percentage, 0);
     
     return [
-      ...topAssets,
+      ...coloredTopAssets,
       {
         name: 'Other Assets',
         symbol: 'OTHER',
         value: otherValue,
         percentage: otherPercentage,
-        color: '#6B7280',
+        color: uniqueColors[uniqueColors.length - 1], // Последний цвет для "Other"
         logo: ''
       }
     ];
   }, [initialPieChartData]);
 
   useEffect(() => {
-    if (!currentSelectedAsset && processedPieChartData.length > 0) {
+    if ((!currentSelectedAsset || currentSelectedAsset.symbol !== processedPieChartData[0]?.symbol) 
+        && processedPieChartData.length > 0) {
       const firstAsset = assets.find(asset => asset.symbol === processedPieChartData[0].symbol);
       if (firstAsset) {
         setSelectedAsset(firstAsset);
       }
     }
-  }, [currentSelectedAsset, processedPieChartData, assets, setSelectedAsset]);
+  }, [processedPieChartData, assets, setSelectedAsset, currentSelectedAsset]);
 
   const handleTimeRangeChange = (value: string) => {
     if (value === '24H' || value === '1W' || value === '1M' || value === '3M' || value === '6M' || value === '1Y' || value === 'ALL') {
