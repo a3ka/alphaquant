@@ -16,11 +16,20 @@ export async function GET(request: NextRequest) {
     const tokenParam = request.nextUrl.searchParams.get('token')
     const expectedToken = process.env.CRON_SECRET
 
-    if (authHeader !== `Bearer ${expectedToken}` && tokenParam !== expectedToken) {
-      console.log('Auth failed:', { 
-        authHeader,
+    if (!expectedToken) {
+      console.error('CRON_SECRET is not set')
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      )
+    }
+
+    const authToken = authHeader?.split(' ')[1]
+    if (authToken !== expectedToken && tokenParam !== expectedToken) {
+      console.log('Auth failed:', {
+        authToken,
         tokenParam,
-        expectedToken: `Bearer ${expectedToken}`
+        expectedToken
       })
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -85,7 +94,7 @@ export async function GET(request: NextRequest) {
           baseUrl,
           batchNumber,
           result.executionTime || 0,
-          process.env.CRON_SECRET!
+          expectedToken
         )
         console.log('Next batch triggered:', { success: nextBatchSuccess, batchNumber: batchNumber + 1 })
       } catch (error) {
