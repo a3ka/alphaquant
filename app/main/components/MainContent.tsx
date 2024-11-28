@@ -55,10 +55,20 @@ export function MainContent() {
   }, [assets])
 
   // Обработчик смены портфеля
-  const handlePortfolioChange = useCallback((portfolio: Portfolio) => {
+  const handlePortfolioChange = useCallback(async (portfolio: Portfolio) => {
     setSelectedPortfolio(portfolio)
     setSelectedPortfolioId(portfolio.id.toString())
-  }, [])
+    
+    // Дожидаемся завершения обновления данных
+    try {
+      await Promise.all([
+        mutateAssets(),
+        mutateChart(),
+      ])
+    } catch (error) {
+      console.error('Failed to update portfolio data:', error)
+    }
+  }, [mutateAssets, mutateChart])
 
   // Инициализация первого портфеля
   useEffect(() => {

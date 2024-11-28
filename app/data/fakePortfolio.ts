@@ -135,17 +135,21 @@ export const initialAssets: Asset[] = [
 ]
 
 export const portfolioChartData = [
-    { date: '2024-01-07', value: 350000 },
-    { date: '2023-08-01', value: 0 },
-    { date: '2023-09-01', value: 50000 },
-    { date: '2023-10-01', value: 120000 },
-    { date: '2023-11-01', value: 150000 },
-    { date: '2023-12-01', value: 179145 }, // Low point
-    { date: '2024-01-01', value: 250000 },
-    { date: '2024-02-01', value: 320000 },
-    { date: '2024-03-01', value: 411937 }, // High point
-    { date: '2024-04-01', value: 299441 }
-]
+  { timestamp: '2024-01-07', total_value: 350000, period: Period.HOUR_24 },
+  { timestamp: '2023-08-01', total_value: 0, period: Period.HOUR_24 },
+  { timestamp: '2023-09-01', total_value: 50000, period: Period.HOUR_24 },
+  { timestamp: '2023-10-01', total_value: 120000, period: Period.HOUR_24 },
+  { timestamp: '2023-11-01', total_value: 150000, period: Period.HOUR_24 },
+  { timestamp: '2023-12-01', total_value: 179145, period: Period.HOUR_24 }, // Low point
+  { timestamp: '2024-01-01', total_value: 250000, period: Period.HOUR_24 },
+  { timestamp: '2024-02-01', total_value: 320000, period: Period.HOUR_24 },
+  { timestamp: '2024-03-01', total_value: 411937, period: Period.HOUR_24 }, // High point
+  { timestamp: '2024-04-01', total_value: 299441, period: Period.HOUR_24 }
+].map(point => ({
+  timestamp: point.timestamp,
+  total_value: point.total_value,
+  period: Period.HOUR_24
+}))
 
 export const FakePortfolio: DemoPortfolio = {
   id: 'fake-portfolio',
@@ -210,8 +214,8 @@ export const generateDataForTimeRange = (range: TimeRangeType) => {
     const trendFactor = ((date.getTime() - startDate.getTime()) / (now.getTime() - startDate.getTime())) * 50000
     
     data.push({
-      date: date.toISOString(),
-      value: baseValue + randomFactor + trendFactor,
+      timestamp: date.toISOString(),
+      total_value: baseValue + randomFactor + trendFactor,
       period
     })
   }

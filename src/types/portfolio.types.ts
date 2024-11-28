@@ -25,19 +25,25 @@ export interface Asset {
     }
   }
   
+  export interface DemoPortfolioData {
+    assets: Asset[]
+    pieChartData: Asset[]
+    chartData: ChartDataPoint[]
+    totalValue: number
+    totalProfit: number
+    profitPercentage: number
+  }
+  
   export interface DemoPortfolio extends BasePortfolio {
     id: string
+    name: string
+    user_id: string
     type: 'SPOT' | 'MARGIN'
+    description: string
+    is_active: boolean
     created_at: string
     updated_at: string
-    data: {
-      assets: Asset[]
-      pieChartData: Asset[]
-      chartData: { date: string; value: number }[]
-      totalValue: number
-      totalProfit: number
-      profitPercentage: number
-    }
+    data: DemoPortfolioData
   }
   
   export interface UserPortfolio extends BasePortfolio {
@@ -102,11 +108,9 @@ export interface Asset {
     HOUR_24 = 'HOUR_24'
   }
   
-  export interface PortfolioHistory {
-    id: number
-    portfolio_id: number
-    total_value: number
+  export type ChartDataPoint = {
     timestamp: string
+    total_value: number
     period: Period
   }
   
@@ -134,12 +138,6 @@ export interface Asset {
   export interface Balance {
     coin_ticker: string
     amount: number
-  }
-  
-  export interface ChartDataPoint {
-    date: string
-    value: number
-    period: Period
   }
   
   export interface PortfolioChartsProps {
@@ -221,6 +219,14 @@ export interface Asset {
     failedUpdates: number
     executionTime: number
     periodsUpdated: Period[]
+  }
+  
+  export interface PortfolioHistory {
+    id: number
+    portfolio_id: number
+    total_value: number
+    period: Period
+    timestamp: string
   }
   
   

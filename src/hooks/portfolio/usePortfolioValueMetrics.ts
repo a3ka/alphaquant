@@ -14,50 +14,39 @@ export const usePortfolioValueMetrics = (
   chartData: ChartDataPoint[]
 ): PortfolioMetrics => {
   return useMemo(() => {
-    const isDemoPortfolio = selectedPortfolio?.id === 'fake-portfolio'
-
-    if (!selectedPortfolio || !assets?.length) {
-      return {
-        totalValue: 0,
-        totalProfit: 0,
-        profitPercentage: 0
-      }
-    }
-
-    if (isDemoPortfolio && 'data' in selectedPortfolio) {
-      return {
-        totalValue: selectedPortfolio.data.totalValue,
-        totalProfit: selectedPortfolio.data.totalProfit,
-        profitPercentage: selectedPortfolio.data.profitPercentage
-      }
+    if (!selectedPortfolio || !assets.length || !chartData.length) {
+      return { totalValue: 0, totalProfit: 0, profitPercentage: 0 }
     }
 
     const totalValue = assets.reduce((sum, asset) => sum + asset.value, 0)
     
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
-    const previousDayValue = chartData
-      ?.filter(point => point.period === Period.MINUTE_15)
-      .find(point => {
-        const pointDate = new Date(point.date)
-        const timeDiff = Math.abs(pointDate.getTime() - oneDayAgo.getTime())
-        return timeDiff <= 15 * 60 * 1000
-      })?.value || totalValue
-    
-    const totalProfit = totalValue - previousDayValue
-    const profitPercentage = previousDayValue ? (totalProfit / previousDayValue) * 100 : 0
-
-    console.log('Portfolio Metrics:', {
-      id: selectedPortfolio.id,
-      totalValue,
-      totalProfit,
-      profitPercentage,
-      previousDayValue
+    const sortedData = [...chartData].sort((a, b) => {
+      const dateA = new Date(a.timestamp).getTime()
+      const dateB = new Date(b.timestamp).getTime()
+      return dateB - dateA
     })
 
-    return {
-      totalValue,
-      totalProfit,
-      profitPercentage
+    console.log('Sorted data check:', {
+      total: sortedData.length,
+      first: sortedData[0],
+      last: sortedData[sortedData.length - 1]
+    })
+
+    const now = new Date()
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    
+    const historicalRecord = sortedData.find(record => 
+      new Date(record.timestamp) <= oneDayAgo
+    )
+
+    if (!historicalRecord) {
+      console.log('No historical record found for portfolio:', selectedPortfolio.id)
+      return { totalValue, totalProfit: 0, profitPercentage: 0 }
     }
-  }, [selectedPortfolio, assets, chartData])
+
+    const totalProfit = totalValue - historicalRecord.total_value
+    const profitPercentage = Number(((totalProfit / historicalRecord.total_value) * 100).toFixed(2))
+
+    return { totalValue, totalProfit, profitPercentage }
+  }, [selectedPortfolio?.id, assets, chartData])
 }
