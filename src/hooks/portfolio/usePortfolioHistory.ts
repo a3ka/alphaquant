@@ -2,29 +2,21 @@ import useSWR from 'swr'
 import { Portfolio, PortfolioHistoryReturn, TimeRangeType, isDemoPortfolio, Period } from '@/src/types/portfolio.types'
 import { getPeriodByRange } from '@/src/utils/date'
 import { generateDataForTimeRange } from '@/app/data/fakePortfolio'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type FetcherArgs = [string, number | string, Period, TimeRangeType]
+type CachedData = { [key: string]: any }
 
 const fetcher = async ([url, portfolioId, period, timeRange]: FetcherArgs) => {
   console.log('Fetching portfolio history:', { portfolioId, period, timeRange })
-  
   const response = await fetch(`${url}?period=${period}&days=${timeRange}&includeCurrent=true`)
   
   if (!response.ok) {
     const errorData = await response.json()
-    console.error('Portfolio history fetch failed:', errorData)
     throw new Error(errorData.error || 'Failed to fetch chart data')
   }
   
-  const data = await response.json()
-  console.log('Portfolio history received:', { 
-    portfolioId, 
-    recordsCount: data.length,
-    firstRecord: data[0],
-    lastRecord: data[data.length - 1] 
-  })
-  return data
+  return await response.json()
 }
 
 export const usePortfolioHistory = (
@@ -33,61 +25,47 @@ export const usePortfolioHistory = (
 ): PortfolioHistoryReturn => {
   const period = getPeriodByRange(timeRange)
   const shouldFetch = selectedPortfolio && !isDemoPortfolio(selectedPortfolio)
-  const currentRequestRef = useRef<string | null>(null)
+  const cachedDataRef = useRef<CachedData>({})
+  const portfolioIdRef = useRef<string | number | null>(null)
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
 
   const { data, error, isLoading, mutate } = useSWR<any, Error, FetcherArgs | null>(
-    shouldFetch 
+    shouldFetch
       ? [`/api/portfolio/${selectedPortfolio.id}/history`, selectedPortfolio.id, period, timeRange] 
       : null,
-    async (args) => {
-      const [url, portfolioId] = args
-      const requestId = `${portfolioId}-${Date.now()}`
-      
-      if (currentRequestRef.current?.startsWith(String(portfolioId))) {
-        console.log('Cancelling previous request for portfolio:', portfolioId)
-        return
-      }
-      
-      currentRequestRef.current = requestId
-      const result = await fetcher(args)
-      
-      if (currentRequestRef.current === requestId) {
-        currentRequestRef.current = null
-        return result
-      }
-    },
+    fetcher,
     {
       revalidateOnFocus: false,
-      dedupingInterval: 0,
-      keepPreviousData: false,
-      onError: (err) => {
-        console.error('SWR Error:', err)
-        currentRequestRef.current = null
+      dedupingInterval: 300,
+      keepPreviousData: true,
+      revalidateOnMount: true,
+      shouldRetryOnError: false,
+      onSuccess: (newData) => {
+        if (selectedPortfolio?.id) {
+          cachedDataRef.current[selectedPortfolio.id] = newData
+          setIsInitialLoad(false)
+        }
       }
     }
   )
 
-  // Принудительное обновление при смене портфеля
   useEffect(() => {
-    if (shouldFetch && !currentRequestRef.current) {
-      mutate()
+    if (selectedPortfolio?.id !== portfolioIdRef.current) {
+      portfolioIdRef.current = selectedPortfolio?.id || null
+      
+      // Предварительно загружаем данные для нового портфеля
+      if (selectedPortfolio?.id && !isDemoPortfolio(selectedPortfolio)) {
+        const prefetchUrl = `/api/portfolio/${selectedPortfolio.id}/history?period=${period}&days=${timeRange}&includeCurrent=true`
+        fetch(prefetchUrl).then(async (res) => {
+          if (res.ok) {
+            const newData = await res.json()
+            cachedDataRef.current[selectedPortfolio.id] = newData
+          }
+        })
+      }
     }
-  }, [selectedPortfolio?.id, mutate, shouldFetch])
+  }, [selectedPortfolio?.id, period, timeRange])
 
-  // Добавляем дополнительное логирование
-  useEffect(() => {
-    if (selectedPortfolio) {
-      console.log('Portfolio changed:', {
-        id: selectedPortfolio.id,
-        timeRange,
-        period,
-        hasData: !!data,
-        dataLength: data?.length
-      })
-    }
-  }, [selectedPortfolio, timeRange, data])
-
-  // Для демо-портфеля возвращаем фейковые данные
   if (selectedPortfolio && isDemoPortfolio(selectedPortfolio)) {
     return {
       data: generateDataForTimeRange(timeRange),
@@ -97,10 +75,14 @@ export const usePortfolioHistory = (
     }
   }
 
+  const currentData = isInitialLoad && cachedDataRef.current[selectedPortfolio?.id || ''] 
+    ? cachedDataRef.current[selectedPortfolio?.id || '']
+    : data
+
   return {
-    data: data || [],
+    data: currentData || [],
     error: error?.message || null,
-    isLoading,
+    isLoading: isLoading && !currentData,
     mutate
   }
 }

@@ -56,19 +56,28 @@ export function MainContent() {
 
   // Обработчик смены портфеля
   const handlePortfolioChange = useCallback(async (portfolio: Portfolio) => {
-    setSelectedPortfolio(portfolio)
-    setSelectedPortfolioId(portfolio.id.toString())
-    
-    // Дожидаемся завершения обновления данных
     try {
+      // Сначала инвалидируем кеш SWR для старого портфеля
+      if (selectedPortfolio?.id) {
+        await Promise.all([
+          mutateAssets(),
+          mutateChart()
+        ])
+      }
+      
+      // Устанавливаем новый портфель
+      setSelectedPortfolio(portfolio)
+      setSelectedPortfolioId(portfolio.id.toString())
+      
+      // Принудительно запрашиваем новые данные
       await Promise.all([
         mutateAssets(),
-        mutateChart(),
+        mutateChart()
       ])
     } catch (error) {
       console.error('Failed to update portfolio data:', error)
     }
-  }, [mutateAssets, mutateChart])
+  }, [selectedPortfolio, mutateAssets, mutateChart])
 
   // Инициализация первого портфеля
   useEffect(() => {

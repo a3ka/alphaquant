@@ -108,11 +108,14 @@ export interface Asset {
     HOUR_24 = 'HOUR_24'
   }
   
-  export type ChartDataPoint = {
-    timestamp: string
-    total_value: number
-    period: Period
+  export interface ChartDataPoint {
+    timestamp: string;
+    total_value: number;
+    period: Period;
   }
+  
+  export const getChartValue = (point: ChartDataPoint): number => point.total_value;
+  export const getChartDate = (point: ChartDataPoint): Date => new Date(point.timestamp);
   
   export type TimeRangeType = '24H' | '1W' | '1M' | '3M' | '6M' | '1Y' | 'ALL'
   
@@ -123,6 +126,9 @@ export interface Asset {
     percentage: number
     color: string
     logo?: string
+    amount?: number
+    change24h?: number
+    change7d?: number
   }
   
   export interface AssetsDataReturn {

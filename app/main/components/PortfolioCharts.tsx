@@ -5,9 +5,17 @@ import { ArrowDown, ArrowUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Line, LineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Sector, ReferenceLine } from "recharts"
-import { MouseEvent, useMemo, useEffect } from 'react'
+import { MouseEvent, useMemo, useEffect, useCallback } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ChartDataPoint, TimeRangeType, PortfolioChartsProps, Asset, PieChartDataItem } from '@/src/types/portfolio.types'
+import { 
+  ChartDataPoint, 
+  TimeRangeType, 
+  PortfolioChartsProps, 
+  Asset, 
+  PieChartDataItem,
+  getChartValue,
+  getChartDate 
+} from '@/src/types/portfolio.types'
 import { PortfolioSelector } from './PortfolioSelector'
 import { Button } from "@/components/ui/button"
 import { Plus } from 'lucide-react'
@@ -33,14 +41,39 @@ export function PortfolioCharts({
   totalProfit,
   profitPercentage
 }: PortfolioChartsProps) {
+  const processedPieChartData = useMemo(() => {
+    if (!initialPieChartData?.length) return [];
+    
+    const sortedData = [...initialPieChartData].sort((a, b) => b.percentage - a.percentage);
+    const topAssets = sortedData.slice(0, 7);
+    
+    if (sortedData.length <= 7) return topAssets;
+    
+    const otherAssets = sortedData.slice(7);
+    const otherValue = otherAssets.reduce((sum, asset) => sum + asset.value, 0);
+    const otherPercentage = otherAssets.reduce((sum, asset) => sum + asset.percentage, 0);
+    
+    return [
+      ...topAssets,
+      {
+        name: 'Other Assets',
+        symbol: 'OTHER',
+        value: otherValue,
+        percentage: otherPercentage,
+        color: '#6B7280',
+        logo: ''
+      }
+    ];
+  }, [initialPieChartData]);
+
   useEffect(() => {
     if (!currentSelectedAsset && processedPieChartData.length > 0) {
-      const firstAsset = assets.find(asset => asset.symbol === processedPieChartData[0].symbol)
+      const firstAsset = assets.find(asset => asset.symbol === processedPieChartData[0].symbol);
       if (firstAsset) {
-        setSelectedAsset(firstAsset)
+        setSelectedAsset(firstAsset);
       }
     }
-  }, [])
+  }, [currentSelectedAsset, processedPieChartData, assets, setSelectedAsset]);
 
   const handleTimeRangeChange = (value: string) => {
     if (value === '24H' || value === '1W' || value === '1M' || value === '3M' || value === '6M' || value === '1Y' || value === 'ALL') {
@@ -48,36 +81,17 @@ export function PortfolioCharts({
     }
   }
 
-  const processedPieChartData = useMemo(() => {
-    // Сортируем по процентам в портфеле
-    const sortedData = [...initialPieChartData].sort((a, b) => b.percentage - a.percentage)
-    
-    // Берем топ-7 активов
-    const topAssets = sortedData.slice(0, 7)
-    
-    // Считаем общую сумму оставшихся активов
-    const otherAssets = sortedData.slice(7)
-    const otherValue = otherAssets.reduce((sum, asset) => sum + asset.value, 0)
-    const otherPercentage = otherAssets.reduce((sum, asset) => sum + asset.percentage, 0)
-    
-    if (otherAssets.length === 0) return topAssets
+  const highestValue = useMemo(() => {
+    if (!portfolioData?.length) return 0;
+    return Math.max(...portfolioData.map(point => getChartValue(point)));
+  }, [portfolioData]);
 
-    return [
-      ...topAssets,
-      {
-        name: 'Other',
-        symbol: 'OTHER',
-        value: otherValue,
-        percentage: otherPercentage,
-        color: '#6B7280'
-      }
-    ]
-  }, [initialPieChartData])
+  const highestValueDate = useMemo(() => {
+    if (!portfolioData?.length) return null;
+    return portfolioData.find(point => getChartValue(point) === highestValue)?.timestamp;
+  }, [portfolioData, highestValue]);
 
-  const highestValue = portfolioData ? Math.max(...portfolioData.map((item: ChartDataPoint) => item.value)) : 0
-  const highestValueDate = portfolioData?.find(item => item.value === highestValue)?.date
-
-  const handlePieClick = (_: MouseEvent<SVGElement>, index: number) => {
+  const handlePieClick = useCallback((_: MouseEvent<SVGElement>, index: number) => {
     const clickedItem = processedPieChartData[index];
     if (clickedItem.symbol === 'OTHER') return;
     
@@ -85,7 +99,7 @@ export function PortfolioCharts({
     if (correspondingAsset) {
       setSelectedAsset(correspondingAsset);
     }
-  };
+  }, [processedPieChartData, assets, setSelectedAsset]);
 
   return (
     <Card className="bg-transparent border-0">
@@ -133,7 +147,7 @@ export function PortfolioCharts({
                 vertical={false} 
               />
               <XAxis 
-                dataKey="date" 
+                dataKey="timestamp" 
                 stroke="#9CA3AF"
                 tickFormatter={formatDate}
                 tick={{ fontSize: 11 }}
@@ -166,7 +180,7 @@ export function PortfolioCharts({
               />
               <Line 
                 type="monotone" 
-                dataKey="value" 
+                dataKey="total_value" 
                 stroke="url(#colorGradient)"
                 strokeWidth={2}
                 dot={false}
