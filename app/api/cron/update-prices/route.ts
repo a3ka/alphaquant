@@ -43,32 +43,26 @@ export async function GET(request: NextRequest) {
       console.error('Failed to update crypto metadata:', error)
     }
 
-    // Получаем все активные портфели
+    // Получаем все активные портфели и обновляем их
     const portfolios = await portfolioService.getAllActivePortfolios()
-    console.log('Retrieved active portfolios:', {
-      count: portfolios.length,
-      portfolioIds: portfolios.map(p => p.id)
-    })
-
-    // Определяем периоды для обновления
-    const now = new Date()
-    const force = request.nextUrl.searchParams.get('force')
-    const periodsToUpdate = force 
-      ? [
-          Period.MINUTE_15,
-          ...(force === 'hour' ? [Period.HOUR_1] : []),
-          ...(force === 'hour4' ? [Period.HOUR_4] : []),
-          ...(force === 'hour24' ? [Period.HOUR_24] : [])
-        ]
-      : portfolioService.getPeriodsToUpdate(now.getMinutes(), now.getHours())
-
-    console.log('Periods to update:', periodsToUpdate)
-
-    // Обрабатываем портфели параллельно
+    const periodsToUpdate = portfolioService.getPeriodsToUpdate(
+      new Date().getMinutes(), 
+      new Date().getHours()
+    )
+    
     const result = await portfolioService.processPortfoliosInParallel(
       portfolios,
       periodsToUpdate
     )
+
+    // Очищаем старые записи
+    console.log('Starting cleanup of old history records...')
+    try {
+      await portfolioService.cleanupOldHistory()
+      console.log('Old history records cleaned up successfully')
+    } catch (error) {
+      console.error('Failed to cleanup old history:', error)
+    }
 
     const executionTime = Date.now() - startTime
     console.log('=== Cron job completed ===', {
