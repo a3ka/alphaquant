@@ -1,5 +1,18 @@
 import { createServerSupabaseClient } from '@/src/services/supabase/server'
-import type { Portfolio, UserPortfolio, PortfolioHistory, PortfolioBalancesResponse, PortfolioId, PortfolioBalance, EnrichedPortfolioBalance, CoinMetadata, PortfolioUpdateResult, BatchResult } from '@/src/types/portfolio.types'
+import type { 
+  Portfolio, 
+  UserPortfolio, 
+  PortfolioHistory, 
+  PortfolioBalancesResponse, 
+  PortfolioId, 
+  PortfolioBalance, 
+  EnrichedPortfolioBalance, 
+  CoinMetadata, 
+  PortfolioUpdateResult, 
+  BatchResult,
+  PortfolioProcessResult,
+  PortfolioProcessResponse
+} from '@/src/types/portfolio.types'
 import { Period } from '@/src/types/portfolio.types'
 import { marketService } from './market'
 import { getPeriodByRange, getStartDate } from '@/src/utils/date'
@@ -471,115 +484,83 @@ export const portfolioService = {
     }
   },
 
-  calculateBatchSize(totalPortfolios: number, previousExecutionTime?: number): number {
-    if (!previousExecutionTime) {
-      return Math.min(
-        Math.max(Math.ceil(totalPortfolios * 0.05), MIN_BATCH_SIZE),
-        MAX_BATCH_SIZE
+  async processPortfoliosInParallel(
+    portfolios: Array<{ id: number }>, 
+    periodsToUpdate: Period[],
+    chunkSize: number = 5
+  ): Promise<PortfolioProcessResponse> {
+    const startTime = Date.now()
+    const results: PortfolioProcessResult[] = []
+
+    console.log('=== Starting parallel portfolio processing ===', {
+      totalPortfolios: portfolios.length,
+      chunkSize,
+      periodsToUpdate,
+      startTime: new Date(startTime).toISOString()
+    })
+
+    for (let i = 0; i < portfolios.length; i += chunkSize) {
+      const chunk = portfolios.slice(i, i + chunkSize)
+      console.log(`Processing chunk ${i / chunkSize + 1}/${Math.ceil(portfolios.length / chunkSize)}`, {
+        portfolioIds: chunk.map(p => p.id),
+        chunkStartTime: new Date().toISOString()
+      })
+      
+      const chunkPromises = chunk.map(portfolio => 
+        this.updatePortfolioData(portfolio.id)
+          .then(async totalValue => {
+            console.log(`Portfolio ${portfolio.id} updated with value: ${totalValue}`)
+            
+            await Promise.all([
+              this.deleteCurrentValue(portfolio.id),
+              ...periodsToUpdate.map(period => 
+                this.savePortfolioHistory({
+                  portfolioId: portfolio.id,
+                  totalValue,
+                  period
+                })
+              )
+            ])
+            
+            console.log(`Portfolio ${portfolio.id} history saved for periods:`, periodsToUpdate)
+            return { 
+              portfolioId: portfolio.id, 
+              success: true 
+            } as PortfolioProcessResult
+          })
+          .catch(error => {
+            console.error(`Failed to process portfolio ${portfolio.id}:`, error)
+            return {
+              portfolioId: portfolio.id,
+              success: false,
+              error: error instanceof Error ? error.message : 'Unknown error'
+            } as PortfolioProcessResult
+          })
       )
+
+      const chunkResults = await Promise.all(chunkPromises)
+      results.push(...chunkResults)
+      
+      console.log(`Chunk ${i / chunkSize + 1} completed`, {
+        successCount: chunkResults.filter(r => r.success).length,
+        failureCount: chunkResults.filter(r => !r.success).length,
+        chunkExecutionTime: Date.now() - startTime
+      })
     }
 
-    return Math.min(
-      Math.max(
-        Math.ceil((TARGET_EXECUTION_TIME / previousExecutionTime) * MIN_BATCH_SIZE),
-        MIN_BATCH_SIZE
-      ),
-      MAX_BATCH_SIZE
-    )
-  },
-
-  async processBatch(
-    portfolioIds: number[], 
-    periods: Period[],
-    startTime: number
-  ): Promise<BatchResult> {
-    const results: PortfolioUpdateResult[] = []
-    const errors: string[] = []
-
-    for (const portfolioId of portfolioIds) {
-      try {
-        const totalValue = await this.updatePortfolioData(portfolioId)
-        
-        await Promise.all([
-          this.deleteCurrentValue(portfolioId),
-          ...periods.map(period => 
-            this.savePortfolioHistory({
-              portfolioId,
-              totalValue,
-              period
-            })
-          )
-        ])
-        
-        results.push({ 
-          success: true, 
-          historyCount: periods.length 
-        })
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        console.error(`Error processing portfolio ${portfolioId}:`, errorMessage)
-        errors.push(`Portfolio ${portfolioId}: ${errorMessage}`)
-        results.push({ 
-          success: false, 
-          historyCount: 0,
-          error: errorMessage
-        })
-      }
-    }
-
-    const stats = results.reduce((acc, result) => ({
-      updatedPortfolios: acc.updatedPortfolios + (result.success ? 1 : 0),
-      savedHistoryRecords: acc.savedHistoryRecords + result.historyCount
-    }), { 
-      updatedPortfolios: 0, 
-      savedHistoryRecords: 0 
+    const executionTime = Date.now() - startTime
+    console.log('=== Parallel processing completed ===', {
+      totalPortfolios: portfolios.length,
+      successfulUpdates: results.filter(r => r.success).length,
+      failedUpdates: results.filter(r => !r.success).length,
+      totalExecutionTime: executionTime,
+      averageTimePerPortfolio: executionTime / portfolios.length
     })
 
     return {
-      success: errors.length === 0,
-      ...stats,
-      errors: errors.length > 0 ? errors : undefined,
-      executionTime: Date.now() - startTime
-    }
-  },
-
-  async triggerNextBatch(
-    baseUrl: string, 
-    batchNumber: number, 
-    executionTime: number,
-    authToken: string
-  ): Promise<boolean> {
-    const nextBatchUrl = new URL('/api/cron/update-prices', baseUrl)
-    nextBatchUrl.searchParams.set('batch', (batchNumber + 1).toString())
-    nextBatchUrl.searchParams.set('prevTime', executionTime.toString())
-    
-    try {
-      console.log('Triggering next batch:', {
-        url: nextBatchUrl.toString(),
-        batchNumber: batchNumber + 1,
-        executionTime,
-        authHeader: `Bearer ${authToken}`
-      })
-
-      const response = await fetch(nextBatchUrl.toString(), {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Accept': 'application/json'
-        }
-      })
-
-      if (!response.ok) {
-        const text = await response.text()
-        console.error('Error details:', text)
-        throw new Error(`${response.status} ${response.statusText}`)
-      }
-
-      const data = await response.json()
-      return data.success === true
-    } catch (error) {
-      console.error('Failed to trigger next batch:', error)
-      return false
+      success: results.every(r => r.success),
+      results,
+      executionTime
     }
   }
 }

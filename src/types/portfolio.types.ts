@@ -203,4 +203,24 @@ export interface Asset {
     error?: string
   }
   
+  export interface PortfolioProcessResult {
+    portfolioId: number
+    success: boolean
+    error?: string
+  }
+  
+  export interface PortfolioProcessResponse {
+    success: boolean
+    results: PortfolioProcessResult[]
+    executionTime: number
+  }
+  
+  export interface PortfolioUpdateStats {
+    totalPortfolios: number
+    successfulUpdates: number
+    failedUpdates: number
+    executionTime: number
+    periodsUpdated: Period[]
+  }
+  
   

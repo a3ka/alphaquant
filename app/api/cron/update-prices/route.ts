@@ -10,8 +10,9 @@ export async function GET(request: NextRequest) {
     url: request.url,
     headers: Object.fromEntries(request.headers)
   })
-  
+
   try {
+    // Проверка авторизации
     const authHeader = request.headers.get('Authorization')
     const tokenParam = request.nextUrl.searchParams.get('token')
     const expectedToken = process.env.CRON_SECRET
@@ -26,49 +27,30 @@ export async function GET(request: NextRequest) {
 
     const authToken = authHeader?.split(' ')[1]
     if (authToken !== expectedToken && tokenParam !== expectedToken) {
-      console.log('Auth failed:', {
-        authToken,
-        tokenParam,
-        expectedToken
-      })
+      console.log('Auth failed:', { authToken, tokenParam, expectedToken })
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    console.log('Auth check:', {
-      authHeader,
-      tokenParam,
-      expectedToken: process.env.CRON_SECRET
-    })
-
-    // Обновляем метаданные в начале
+    // Обновляем метаданные криптовалют
+    console.log('Updating crypto metadata...')
     try {
       await marketService.updateCryptoMetadata()
+      console.log('Crypto metadata updated successfully')
     } catch (error) {
       console.error('Failed to update crypto metadata:', error)
     }
 
-    const batchNumber = parseInt(request.nextUrl.searchParams.get('batch') || '0')
-    const previousTime = parseInt(request.nextUrl.searchParams.get('prevTime') || '0')
-    
+    // Получаем все активные портфели
     const portfolios = await portfolioService.getAllActivePortfolios()
-    const batchSize = portfolioService.calculateBatchSize(portfolios.length, previousTime)
-    
-    const portfolioBatches = []
-    for (let i = 0; i < portfolios.length; i += batchSize) {
-      portfolioBatches.push(portfolios.slice(i, i + batchSize).map(p => p.id))
-    }
+    console.log('Retrieved active portfolios:', {
+      count: portfolios.length,
+      portfolioIds: portfolios.map(p => p.id)
+    })
 
-    if (batchNumber >= portfolioBatches.length) {
-      return NextResponse.json({ 
-        success: true,
-        message: 'All batches processed',
-        stats: { totalPortfolios: portfolios.length }
-      })
-    }
-
+    // Определяем периоды для обновления
     const now = new Date()
     const force = request.nextUrl.searchParams.get('force')
     const periodsToUpdate = force 
@@ -80,45 +62,43 @@ export async function GET(request: NextRequest) {
         ]
       : portfolioService.getPeriodsToUpdate(now.getMinutes(), now.getHours())
 
-    const result = await portfolioService.processBatch(
-      portfolioBatches[batchNumber],
-      periodsToUpdate,
-      startTime
+    console.log('Periods to update:', periodsToUpdate)
+
+    // Обрабатываем портфели параллельно
+    const result = await portfolioService.processPortfoliosInParallel(
+      portfolios,
+      periodsToUpdate
     )
 
-    // Запускаем следующий батч
-    if (batchNumber + 1 < portfolioBatches.length) {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
-      try {
-        const nextBatchSuccess = await portfolioService.triggerNextBatch(
-          baseUrl,
-          batchNumber,
-          result.executionTime || 0,
-          expectedToken
-        )
-        console.log('Next batch triggered:', { success: nextBatchSuccess, batchNumber: batchNumber + 1 })
-      } catch (error) {
-        console.error('Failed to trigger next batch:', error)
-      }
-    }
+    const executionTime = Date.now() - startTime
+    console.log('=== Cron job completed ===', {
+      executionTime,
+      successRate: `${((result.results.filter(r => r.success).length / portfolios.length) * 100).toFixed(1)}%`,
+      periodsUpdated: periodsToUpdate,
+      totalPortfolios: portfolios.length
+    })
 
     return NextResponse.json({
       success: result.success,
       stats: {
-        batchNumber,
-        batchSize,
-        totalBatches: portfolioBatches.length,
-        remainingBatches: portfolioBatches.length - batchNumber - 1,
-        ...result
+        totalPortfolios: portfolios.length,
+        successfulUpdates: result.results.filter(r => r.success).length,
+        failedUpdates: result.results.filter(r => !r.success).length,
+        executionTime: result.executionTime,
+        periodsUpdated: periodsToUpdate,
+        errors: result.results
+          .filter(r => !r.success)
+          .map(r => `Portfolio ${r.portfolioId}: ${r.error}`)
       }
     })
 
   } catch (error) {
+    const executionTime = Date.now() - startTime
     console.error('Cron job failed:', error)
     return NextResponse.json(
       { 
         error: error instanceof Error ? error.message : 'Unknown error',
-        stats: { executionTime: Date.now() - startTime }
+        stats: { executionTime }
       },
       { status: 500 }
     )
