@@ -99,6 +99,12 @@ export function PortfolioCharts({
     ];
   }, [initialPieChartData]);
 
+  const handleTimeRangeChange = (value: string) => {
+    if (value === '24H' || value === '1W' || value === '1M' || value === '3M' || value === '6M' || value === '1Y' || value === 'ALL') {
+      setTimeRange(value as TimeRangeType)
+    }
+  }
+
   const highestValue = useMemo(() => {
     if (!portfolioData?.length) return 0;
     return Math.max(...portfolioData.map(point => getChartValue(point)));
@@ -142,14 +148,19 @@ export function PortfolioCharts({
       <CardHeader>
         <div className="flex justify-between items-center mb-4">
           <CardTitle className="text-white text-xl font-semibold">Portfolio Overview</CardTitle>
-          <Button 
-            variant="outline" 
-            className="bg-[#1F2937] text-white hover:bg-[#374151] border-gray-700"
-            onClick={() => setIsAddTransactionOpen(true)}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Transaction
-          </Button>
+          <Tabs value={timeRange} onValueChange={handleTimeRangeChange}>
+            <TabsList className="bg-[#1F2937] border border-gray-700">
+              {['24H', '1W', '1M', '3M', '6M', '1Y', 'ALL'].map((range) => (
+                <TabsTrigger 
+                  key={range}
+                  className="data-[state=active]:bg-[#374151] text-gray-400 data-[state=active]:text-white hover:text-white" 
+                  value={range}
+                >
+                  {range}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         </div>
         <PortfolioSelector 
           onPortfolioChange={onPortfolioChange}
@@ -157,9 +168,9 @@ export function PortfolioCharts({
         />
       </CardHeader>
       <CardContent>
-      <div className="mb-6">
-        <div className="text-3xl font-bold text-white">
-          ${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+        <div className="mb-6">
+          <div className="text-3xl font-bold text-white">
+            ${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
           </div>
           <div className={`flex items-center ${profitPercentage >= 0 ? 'text-[#4ADE80]' : 'text-red-500'}`}>
             {profitPercentage >= 0 ? <ArrowUp className="h-4 w-4 mr-1" /> : <ArrowDown className="h-4 w-4 mr-1" />}
