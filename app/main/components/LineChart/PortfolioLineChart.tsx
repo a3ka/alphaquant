@@ -37,9 +37,10 @@ export function PortfolioLineChart({
         return `${hours.toString().padStart(2, '0')}:00`;
       }
       case '1W': {
-        const day = date.getDate();
-        const month = date.toLocaleDateString('en-US', { month: 'short' });
-        return `${month} ${day}`;
+        return date.toLocaleDateString('en-US', { 
+          month: 'short',
+          day: 'numeric'
+        });
       }
       case '1M': {
         const month = date.toLocaleDateString('en-US', { month: 'short' });
@@ -120,18 +121,6 @@ export function PortfolioLineChart({
     }
   };
 
-  const getWeeklyTicks = () => {
-    if (!chartData.length) return [];
-    
-    const startTime = new Date(chartData[0].timestamp).getTime();
-    const endTime = new Date(chartData[chartData.length - 1].timestamp).getTime();
-    const dayInterval = (endTime - startTime) / 6;
-    
-    return Array.from({ length: 7 }, (_, i) => 
-      new Date(startTime + dayInterval * i).toISOString()
-    );
-  };
-
   return (
     <ResponsiveContainer width="100%" height={CHART_CONFIG.height}>
       <LineChart data={chartData} margin={CHART_CONFIG.margin}>
@@ -157,7 +146,8 @@ export function PortfolioLineChart({
           interval={getAxisInterval()}
           minTickGap={35}
           type="category"
-          ticks={timeRange === '1W' ? getWeeklyTicks() : undefined}
+          axisLine={{ stroke: CHART_CONFIG.colors.axis, strokeWidth: 1 }}
+          tickLine={{ stroke: CHART_CONFIG.colors.axis, strokeWidth: 1 }}
         />
         <YAxis 
           stroke={CHART_CONFIG.colors.axis}
