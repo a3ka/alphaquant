@@ -163,6 +163,7 @@ export function MainContent() {
               totalValue={totalValue}
               totalProfit={totalProfit}
               profitPercentage={profitPercentage}
+              isLoading={isLoading}
             />
 
             <PortfolioTable 

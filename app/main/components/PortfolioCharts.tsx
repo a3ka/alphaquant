@@ -64,42 +64,16 @@ export function PortfolioCharts({
   selectedPortfolio,
   totalValue,
   totalProfit,
-  profitPercentage
+  profitPercentage,
+  isLoading
 }: PortfolioChartsProps) {
-  if (!portfolioData?.length || !initialPieChartData?.length) {
-    return (
-      <Card className="bg-transparent border-0">
-        <CardHeader>
-          <div className="flex justify-between items-center mb-4">
-            <CardTitle className="text-white text-xl font-semibold">Portfolio Overview</CardTitle>
-            <Button 
-              variant="outline" 
-              className="bg-[#1F2937] text-white hover:bg-[#374151] border-gray-700"
-              onClick={() => setIsAddTransactionOpen(true)}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Transaction
-            </Button>
-          </div>
-          <PortfolioSelector 
-            onPortfolioChange={onPortfolioChange}
-            externalSelectedPortfolio={selectedPortfolio || FakePortfolio}
-          />
-        </CardHeader>
-        <CardContent className="flex items-center justify-center h-[500px] text-gray-400">
-          No data available. Add some transactions to see portfolio analytics.
-        </CardContent>
-      </Card>
-    );
-  }
-
   const processedPieChartData = useMemo(() => {
     if (!initialPieChartData?.length) return [];
     
     const sortedData = [...initialPieChartData].sort((a, b) => b.percentage - a.percentage);
     const topAssets = sortedData.slice(0, 7);
     
-    const uniqueColors = generateUniqueColors(topAssets.length + 1); // +1 для "Other"
+    const uniqueColors = generateUniqueColors(topAssets.length + 1);
     
     const coloredTopAssets = topAssets.map((asset, index) => ({
       ...asset,
@@ -119,27 +93,11 @@ export function PortfolioCharts({
         symbol: 'OTHER',
         value: otherValue,
         percentage: otherPercentage,
-        color: uniqueColors[uniqueColors.length - 1], // Последний цвет для "Other"
+        color: uniqueColors[uniqueColors.length - 1],
         logo: ''
       }
     ];
   }, [initialPieChartData]);
-
-  useEffect(() => {
-    if ((!currentSelectedAsset || currentSelectedAsset.symbol !== processedPieChartData[0]?.symbol) 
-        && processedPieChartData.length > 0) {
-      const firstAsset = assets.find(asset => asset.symbol === processedPieChartData[0].symbol);
-      if (firstAsset) {
-        setSelectedAsset(firstAsset);
-      }
-    }
-  }, [processedPieChartData, assets, setSelectedAsset, currentSelectedAsset]);
-
-  const handleTimeRangeChange = (value: string) => {
-    if (value === '24H' || value === '1W' || value === '1M' || value === '3M' || value === '6M' || value === '1Y' || value === 'ALL') {
-      setTimeRange(value as TimeRangeType)
-    }
-  }
 
   const highestValue = useMemo(() => {
     if (!portfolioData?.length) return 0;
@@ -161,26 +119,38 @@ export function PortfolioCharts({
     }
   }, [processedPieChartData, assets, setSelectedAsset]);
 
+  useEffect(() => {
+    if ((!currentSelectedAsset || currentSelectedAsset.symbol !== processedPieChartData[0]?.symbol) 
+        && processedPieChartData.length > 0) {
+      const firstAsset = assets.find(asset => asset.symbol === processedPieChartData[0].symbol);
+      if (firstAsset) {
+        setSelectedAsset(firstAsset);
+      }
+    }
+  }, [processedPieChartData, assets, setSelectedAsset, currentSelectedAsset]);
+
+  if (!portfolioData || portfolioData.length === 0) {
+    return <div className="text-center text-gray-500">No data available</div>;
+  }
+
+  if (isLoading) {
+    return <div className="text-center text-gray-500">Loading...</div>;
+  }
+
   return (
     <Card className="bg-transparent border-0">
       <CardHeader>
         <div className="flex justify-between items-center mb-4">
           <CardTitle className="text-white text-xl font-semibold">Portfolio Overview</CardTitle>
-          <Tabs value={timeRange} onValueChange={handleTimeRangeChange}>
-            <TabsList className="bg-[#1F2937] border border-gray-700">
-              {['24H', '1W', '1M', '3M', '6M', '1Y', 'ALL'].map((range) => (
-                <TabsTrigger 
-                  key={range}
-                  className="data-[state=active]:bg-[#374151] text-gray-400 data-[state=active]:text-white hover:text-white" 
-                  value={range}
-                >
-                  {range}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+          <Button 
+            variant="outline" 
+            className="bg-[#1F2937] text-white hover:bg-[#374151] border-gray-700"
+            onClick={() => setIsAddTransactionOpen(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Transaction
+          </Button>
         </div>
-        {/* <PortfolioSelector onPortfolioChange={onPortfolioChange} /> */}
         <PortfolioSelector 
           onPortfolioChange={onPortfolioChange}
           externalSelectedPortfolio={selectedPortfolio || FakePortfolio}

@@ -153,7 +153,7 @@ export interface Asset {
     pieChartData: PieChartDataItem[]
     assets: Asset[]
     currentSelectedAsset: Asset | undefined
-    setSelectedAsset: (asset: Asset) => void
+    setSelectedAsset: (asset: Asset | undefined) => void
     portfolioRisk: number
     getRiskColor: (risk: number) => string
     formatYAxis: (value: number) => string
@@ -164,6 +164,7 @@ export interface Asset {
     totalValue: number
     totalProfit: number
     profitPercentage: number
+    isLoading: boolean
   }
   
   export interface CoinMetadata {
