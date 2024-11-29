@@ -20,6 +20,7 @@ import { PortfolioSelector } from './PortfolioSelector'
 import { Button } from "@/components/ui/button"
 import { Plus } from 'lucide-react'
 import { FakePortfolio } from '@/app/data/fakePortfolio'
+import { PortfolioLineChart } from './LineChart/PortfolioLineChart'
 
 const generateUniqueColors = (count: number) => {
   const baseHues = [
@@ -197,76 +198,14 @@ export function PortfolioCharts({
         </div>
 
         <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={portfolioData || []}>
-              <CartesianGrid 
-                strokeDasharray="3 3" 
-                stroke="#1F2937" 
-                horizontal={true} 
-                vertical={false} 
-              />
-              <XAxis 
-                dataKey="timestamp" 
-                stroke="#9CA3AF"
-                tickFormatter={formatDate}
-                tick={{ fontSize: 11 }}
-                dy={10}
-                interval="preserveStartEnd"
-              />
-              <YAxis 
-                stroke="#9CA3AF"
-                tickFormatter={formatYAxis}
-                width={60}
-                tick={{ fontSize: 11 }}
-                dx={-10}
-                domain={['dataMin', 'dataMax']}
-                padding={{ top: 20, bottom: 20 }}
-              />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#1F2937', 
-                  border: 'none', 
-                  color: '#E5E7EB',
-                  fontSize: '12px',
-                  padding: '8px'
-                }}
-                formatter={(value: number) => [`$${value.toLocaleString()}`, 'Portfolio Value']}
-                labelFormatter={(label: string) => new Date(label).toLocaleDateString('en-US', { 
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric'
-                })}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="total_value" 
-                stroke="url(#colorGradient)"
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 6, fill: '#8B5CF6' }}
-              />
-              <defs>
-                <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8B5CF6" stopOpacity={1}/>
-                  <stop offset="95%" stopColor="#EC4899" stopOpacity={1}/>
-                </linearGradient>
-              </defs>
-              {highestValueDate && (
-                <ReferenceLine
-                  x={highestValueDate}
-                  stroke="#8B5CF6"
-                  strokeDasharray="3 3"
-                  label={{
-                    position: 'top',
-                    value: `High: $${highestValue.toLocaleString()}`,
-                    fill: '#E5E7EB',
-                    fontSize: 12,
-                    offset: 20
-                  }}
-                />
-              )}
-            </LineChart>
-          </ResponsiveContainer>
+          <PortfolioLineChart
+            data={portfolioData || []}
+            timeRange={timeRange}
+            formatYAxis={formatYAxis}
+            formatDate={formatDate}
+            highestValue={highestValue}
+            highestValueDate={highestValueDate || null}
+          />
         </div>
 
         <div className="mt-6 flex justify-between items-start">

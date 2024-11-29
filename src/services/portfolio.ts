@@ -340,10 +340,9 @@ export const portfolioService = {
 
     // Удаление старых записей по периодам
     const cleanupRules = [
-      { period: Period.MINUTE_15, days: 2 },    // Храним 15-минутные данные за 2 дня
-      { period: Period.HOUR_1, days: 7 },       // Часовые за неделю
-      { period: Period.HOUR_4, days: 30 },      // 4-часовые за месяц
-      { period: Period.HOUR_24, days: 365 }     // 24-часовые за год
+      { period: Period.MINUTE_15, days: 8 },    // Храним 15-минутные данные за 8 дней
+      { period: Period.HOUR_1, days: 32 },       // Часовые за 32 дня
+      { period: Period.HOUR_4, days: 128 },      // 4-часовые за 128 дней
     ]
 
     for (const rule of cleanupRules) {

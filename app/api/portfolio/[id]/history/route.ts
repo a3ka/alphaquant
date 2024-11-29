@@ -4,38 +4,25 @@ import { Period } from '@/src/types/portfolio.types'
 
 export async function GET(
   request: NextRequest,
-  context: { params: any }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const params = await context.params
-    const id = params.id
-    const searchParams = request.nextUrl.searchParams
+    const { searchParams } = new URL(request.url)
     const period = searchParams.get('period') as Period
-    const days = parseInt(searchParams.get('days') || '7')
+    const days = parseInt(searchParams.get('days') || '1')
     
-    if (!period || !Object.values(Period).includes(period as Period)) {
-      return NextResponse.json(
-        { error: 'Invalid period provided' },
-        { status: 400 }
-      )
-    }
+    const now = new Date()
+    const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
 
-    const startDate = new Date()
-    startDate.setDate(startDate.getDate() - days)
-    
     const history = await portfolioService.getPortfolioHistory(
-      parseInt(id),
-      period as Period,
+      Number(params.id),
+      period,
       startDate
     )
-    
+
     return NextResponse.json(history)
   } catch (error: any) {
-    console.error('Error in history route:', error)
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
 

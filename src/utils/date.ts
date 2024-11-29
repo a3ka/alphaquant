@@ -23,12 +23,15 @@ export const getStartDate = (range: TimeRangeType): Date => {
 export const getPeriodByRange = (range: TimeRangeType): Period => {
   switch(range) {
     case '24H':
-      return Period.HOUR_1
+      return Period.MINUTE_15
     case '1W':
-      return Period.HOUR_4
+      return Period.MINUTE_15
     case '1M':
+      return Period.HOUR_1
     case '3M':
+      return Period.HOUR_4
     case '6M':
+      return Period.HOUR_4
     case '1Y':
       return Period.HOUR_24
     default:
@@ -58,5 +61,25 @@ export const getDateFormatter = (range: TimeRangeType) => {
         month: 'short',
         year: '2-digit'
       })
+  }
+}
+
+export const getDaysFromTimeRange = (range: TimeRangeType): number => {
+  switch(range) {
+    case '24H':
+      return 1
+    case '1W':
+      return 7
+    case '1M':
+      return 30
+    case '3M':
+      return 90
+    case '6M':
+      return 180
+    case '1Y':
+    case 'ALL':
+      return 365
+    default:
+      return 1
   }
 }

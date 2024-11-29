@@ -1,6 +1,6 @@
 import useSWR from 'swr'
 import { Portfolio, PortfolioHistoryReturn, TimeRangeType, isDemoPortfolio, Period } from '@/src/types/portfolio.types'
-import { getPeriodByRange } from '@/src/utils/date'
+import { getPeriodByRange, getDaysFromTimeRange } from '@/src/utils/date'
 import { generateDataForTimeRange } from '@/app/data/fakePortfolio'
 import { useEffect, useRef, useState } from 'react'
 
@@ -9,7 +9,8 @@ type CachedData = { [key: string]: any }
 
 const fetcher = async ([url, portfolioId, period, timeRange]: FetcherArgs) => {
   console.log('Fetching portfolio history:', { portfolioId, period, timeRange })
-  const response = await fetch(`${url}?period=${period}&days=${timeRange}&includeCurrent=true`)
+  const days = getDaysFromTimeRange(timeRange)
+  const response = await fetch(`${url}?period=${period}&days=${days}&includeCurrent=true`)
   
   if (!response.ok) {
     const errorData = await response.json()
@@ -55,7 +56,8 @@ export const usePortfolioHistory = (
       
       // Предварительно загружаем данные для нового портфеля
       if (selectedPortfolio?.id && !isDemoPortfolio(selectedPortfolio)) {
-        const prefetchUrl = `/api/portfolio/${selectedPortfolio.id}/history?period=${period}&days=${timeRange}&includeCurrent=true`
+        const days = getDaysFromTimeRange(timeRange)
+        const prefetchUrl = `/api/portfolio/${selectedPortfolio.id}/history?period=${period}&days=${days}&includeCurrent=true`
         fetch(prefetchUrl).then(async (res) => {
           if (res.ok) {
             const newData = await res.json()

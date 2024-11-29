@@ -181,31 +181,39 @@ export const generateDataForTimeRange = (range: TimeRangeType) => {
   switch (range) {
     case '24H':
       startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-      interval = 60 * 60 * 1000 // каждый час
+      interval = 15 * 60 * 1000 // каждые 15 минут
       period = Period.MINUTE_15
       break
     case '1W':
       startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      interval = 24 * 60 * 60 * 1000 // каждый день
-      period = Period.HOUR_1
+      interval = 15 * 60 * 1000 // каждые 15 минут
+      period = Period.MINUTE_15
       break
     case '1M':
       startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-      interval = 24 * 60 * 60 * 1000 // каждый день
+      interval = 4 * 60 * 60 * 1000 // каждые 4 часа
       period = Period.HOUR_4
       break
     case '3M':
-    case '6M':
-    case '1Y':
       startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
-      interval = 7 * 24 * 60 * 60 * 1000 // каждая неделя
+      interval = 4 * 60 * 60 * 1000 // каждые 4 часа
+      period = Period.HOUR_4
+      break
+    case '6M':
+      startDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000)
+      interval = 4 * 60 * 60 * 1000 // каждые 4 часа
+      period = Period.HOUR_4
+      break
+    case '1Y':
+      startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
+      interval = 24 * 60 * 60 * 1000 // каждый день
       period = Period.HOUR_24
       break
     case 'ALL':
-      return portfolioChartData.map(point => ({
-        ...point,
-        period: Period.HOUR_24
-      }))
+      startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
+      interval = 24 * 60 * 60 * 1000 // каждый день
+      period = Period.HOUR_24
+      break
   }
 
   for (let date = startDate; date <= now; date = new Date(date.getTime() + interval)) {
