@@ -4,9 +4,19 @@ import { Period } from '@/src/types/portfolio.types'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
+    const params = await context.params
+    const id = params.id
+    
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Portfolio ID is required' },
+        { status: 400 }
+      )
+    }
+
     const { searchParams } = new URL(request.url)
     const period = searchParams.get('period') as Period
     const days = parseInt(searchParams.get('days') || '1')
@@ -15,7 +25,7 @@ export async function GET(
     const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
 
     const history = await portfolioService.getPortfolioHistory(
-      Number(params.id),
+      Number(id),
       period,
       startDate
     )
@@ -31,6 +41,16 @@ export async function POST(
   context: { params: any }
 ) {
   try {
+    const params = await context.params
+    const id = params.id
+    
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Portfolio ID is required' },
+        { status: 400 }
+      )
+    }
+
     const { totalValue, period } = await request.json()
     
     if (!totalValue || !period) {
@@ -41,7 +61,7 @@ export async function POST(
     }
 
     await portfolioService.savePortfolioHistory({
-      portfolioId: parseInt(context.params.id),
+      portfolioId: parseInt(id),
       totalValue,
       period
     })
