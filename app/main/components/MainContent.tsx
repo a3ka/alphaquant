@@ -31,6 +31,13 @@ export function MainContent() {
     mutate: mutateChart 
   } = usePortfolioHistory(selectedPortfolio, timeRange)
 
+  // Добавляем логирование для отладки
+  console.log('Chart Data:', {
+    length: chartData?.length,
+    first: chartData?.[0],
+    last: chartData?.[chartData?.length - 1]
+  })
+
   const { totalValue, totalProfit, profitPercentage } = usePortfolioValueMetrics(
     selectedPortfolio,
     assets || [],
