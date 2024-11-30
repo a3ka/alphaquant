@@ -1,5 +1,5 @@
 import useSWR from 'swr'
-import { Portfolio, PortfolioHistoryReturn, TimeRangeType, isDemoPortfolio, Period } from '@/src/types/portfolio.types'
+import { Portfolio, PortfolioHistoryReturn, TimeRangeType, isDemoPortfolio, Period, PortfolioHistory } from '@/src/types/portfolio.types'
 import { getPeriodByRange, getDaysFromTimeRange } from '@/src/utils/date'
 import { generateDataForTimeRange } from '@/app/data/fakePortfolio'
 import { useEffect, useRef, useState } from 'react'
@@ -18,6 +18,38 @@ const fetcher = async ([url, portfolioId, period, timeRange]: FetcherArgs) => {
   }
   
   return await response.json()
+}
+
+const getTimeRangeConstraints = (range: TimeRangeType) => {
+  const now = new Date()
+  
+  switch (range) {
+    case '24H':
+      return {
+        start: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+        end: now,
+        expectedPoints: 96 // каждые 15 минут
+      }
+    case '1W':
+      return {
+        start: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+        end: now,
+        expectedPoints: 168 // каждый час
+      }
+    case '1M':
+      return {
+        start: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
+        end: now,
+        expectedPoints: 180 // каждые 4 часа
+      }
+    case '3M':
+      return {
+        start: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000),
+        end: now,
+        expectedPoints: 540 // каждые 4 часа
+      }
+    // ... остальные кейсы
+  }
 }
 
 export const usePortfolioHistory = (
@@ -80,6 +112,23 @@ export const usePortfolioHistory = (
   const currentData = isInitialLoad && cachedDataRef.current[selectedPortfolio?.id || ''] 
     ? cachedDataRef.current[selectedPortfolio?.id || '']
     : data
+
+  const getAvailableRange = (data: PortfolioHistory[]) => {
+    if (!data?.length) return null;
+    
+    const sortedData = [...data].sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+    
+    return {
+      start: new Date(sortedData[0].timestamp),
+      end: new Date(sortedData[sortedData.length - 1].timestamp),
+      totalDays: Math.ceil(
+        (new Date(sortedData[sortedData.length - 1].timestamp).getTime() - 
+         new Date(sortedData[0].timestamp).getTime()) / (24 * 60 * 60 * 1000)
+      )
+    };
+  };
 
   return {
     data: currentData || [],
