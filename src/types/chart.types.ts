@@ -15,7 +15,7 @@ export interface TimeRangeConfig {
   tooltipFormat: Intl.DateTimeFormatOptions
   maxPoints: number
   axisInterval: 'hour' | 'day' | 'week' | 'month' | 'auto'
-  axisPoints: number
+  axisPoints: number | 'auto'
   dataInterval: Period
   dateFormat: string
 }

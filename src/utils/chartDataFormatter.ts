@@ -31,11 +31,11 @@ export const TIME_RANGE_CONFIGS: Record<TimeRangeType, TimeRangeConfig> = {
   },
   '1W': {
     interval: 'day',
-    format: { weekday: 'short' },
+    format: { month: 'short', day: 'numeric' },
     tooltipFormat: { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false },
     maxPoints: 7,
     axisInterval: 'day',
-    axisPoints: 7,
+    axisPoints: 'auto',
     dataInterval: Period.MINUTE_15,
     dateFormat: 'MMM d'
   },
@@ -135,12 +135,17 @@ export const formatChartData = (
     const groupedData = new Map<string, ChartDataPoint>()
     filteredData.forEach(point => {
       const date = new Date(point.timestamp)
-      date.setMinutes(Math.floor(date.getMinutes() / 15) * 15)
-      date.setSeconds(0)
-      date.setMilliseconds(0)
+      // Округляем до 15 минут
+      const minutes = date.getMinutes()
+      const roundedMinutes = Math.floor(minutes / 15) * 15
+      date.setMinutes(roundedMinutes, 0, 0)
+      
       const key = date.toISOString()
       if (!groupedData.has(key)) {
-        groupedData.set(key, point)
+        groupedData.set(key, {
+          ...point,
+          timestamp: date.toISOString() // Обновляем timestamp до округленного значения
+        })
       }
     })
 

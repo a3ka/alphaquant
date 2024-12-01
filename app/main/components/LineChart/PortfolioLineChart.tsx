@@ -56,22 +56,16 @@ export function PortfolioLineChart({
     if (timeRange === '24H') {
       return Math.max(1, Math.floor(chartData.length / 12))
     }
+    
     if (timeRange === '1W') {
-      return Math.max(1, Math.floor(chartData.length / 7))
+      return Math.floor(chartData.length / dataInfo.uniqueDates.size)
     }
+
     if (timeRange === '1M') {
       return Math.max(1, Math.floor(chartData.length / 6))
     }
-    if (timeRange === '3M') {
-      return Math.max(1, Math.floor(chartData.length / 12))
-    }
-    if (timeRange === '6M') {
-      return Math.max(1, Math.floor(chartData.length / 12))
-    }
-    if (timeRange === '1Y') {
-      return Math.max(1, Math.floor(chartData.length / 12))
-    }
-    return Math.max(1, Math.floor(chartData.length / config.axisPoints))
+
+    return Math.max(1, Math.floor(chartData.length / (typeof config.axisPoints === 'number' ? config.axisPoints : 12)))
   }
 
   return (
