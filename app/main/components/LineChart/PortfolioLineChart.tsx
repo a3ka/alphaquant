@@ -38,7 +38,14 @@ export function PortfolioLineChart({
         hour12: false
       })
     }
-    return getFormattedDate(value, config)
+    if (timeRange === '1W') {
+      return getFormattedDate(value, config)
+    }
+    const date = new Date(value)
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
+    })
   }
 
   const tooltipLabelFormatter = (label: string): string => {
@@ -51,6 +58,18 @@ export function PortfolioLineChart({
     }
     if (timeRange === '1W') {
       return Math.max(1, Math.floor(chartData.length / 7))
+    }
+    if (timeRange === '1M') {
+      return Math.max(1, Math.floor(chartData.length / 6))
+    }
+    if (timeRange === '3M') {
+      return Math.max(1, Math.floor(chartData.length / 12))
+    }
+    if (timeRange === '6M') {
+      return Math.max(1, Math.floor(chartData.length / 12))
+    }
+    if (timeRange === '1Y') {
+      return Math.max(1, Math.floor(chartData.length / 12))
     }
     return Math.max(1, Math.floor(chartData.length / config.axisPoints))
   }

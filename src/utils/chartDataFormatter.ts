@@ -43,9 +43,9 @@ export const TIME_RANGE_CONFIGS: Record<TimeRangeType, TimeRangeConfig> = {
     interval: 'day',
     format: { month: 'short', day: 'numeric' },
     tooltipFormat: { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false },
-    maxPoints: 10,
+    maxPoints: 30,
     axisInterval: 'day',
-    axisPoints: 10,
+    axisPoints: 6,
     dataInterval: Period.HOUR_1,
     dateFormat: 'MMM d'
   },
@@ -53,31 +53,31 @@ export const TIME_RANGE_CONFIGS: Record<TimeRangeType, TimeRangeConfig> = {
     interval: 'day',
     format: { month: 'short', day: 'numeric' },
     tooltipFormat: { month: 'long', day: 'numeric', year: 'numeric' },
-    maxPoints: 12,
+    maxPoints: 90,
     axisInterval: 'day',
     axisPoints: 12,
     dataInterval: Period.HOUR_4,
-    dateFormat: 'MMM d, yyyy'
+    dateFormat: 'MMM d'
   },
   '6M': {
     interval: 'day',
     format: { month: 'short', day: 'numeric' },
     tooltipFormat: { month: 'long', day: 'numeric', year: 'numeric' },
-    maxPoints: 12,
+    maxPoints: 180,
     axisInterval: 'day',
     axisPoints: 12,
     dataInterval: Period.HOUR_4,
-    dateFormat: 'MMM d, yyyy'
+    dateFormat: 'MMM d'
   },
   '1Y': {
     interval: 'month',
-    format: { month: 'short' },
+    format: { month: 'short', day: 'numeric' },
     tooltipFormat: { month: 'long', day: 'numeric', year: 'numeric' },
-    maxPoints: 26,
-    axisInterval: 'week',
-    axisPoints: 26,
+    maxPoints: 365,
+    axisInterval: 'month',
+    axisPoints: 12,
     dataInterval: Period.HOUR_24,
-    dateFormat: 'MMM d, yyyy'
+    dateFormat: 'MMM d'
   },
   'ALL': {
     interval: 'month',
