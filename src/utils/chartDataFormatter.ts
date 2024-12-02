@@ -45,7 +45,7 @@ export const TIME_RANGE_CONFIGS: Record<TimeRangeType, TimeRangeConfig> = {
     tooltipFormat: { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false },
     maxPoints: 30,
     axisInterval: 'day',
-    axisPoints: 6,
+    axisPoints: 'auto',
     dataInterval: Period.HOUR_1,
     dateFormat: 'MMM d'
   },
@@ -148,6 +148,44 @@ export const formatChartData = (
         })
       }
     })
+
+    return Array.from(groupedData.values())
+  }
+
+  if (timeRange === '1M') {
+    const now = new Date()
+    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+    const filteredData = sortedData.filter(point => 
+      new Date(point.timestamp) >= monthAgo
+    )
+
+    // Группируем по часам
+    const groupedData = new Map<string, ChartDataPoint>()
+    filteredData.forEach(point => {
+      const date = new Date(point.timestamp)
+      date.setMinutes(0, 0, 0)
+      const key = date.toISOString()
+      
+      if (!groupedData.has(key)) {
+        groupedData.set(key, {
+          ...point,
+          timestamp: date.toISOString()
+        })
+      }
+    })
+
+    // Добавляем текущий час
+    const currentHour = new Date()
+    currentHour.setMinutes(0, 0, 0)
+    const currentKey = currentHour.toISOString()
+    
+    if (!groupedData.has(currentKey) && groupedData.size > 0) {
+      const lastPoint = Array.from(groupedData.values()).pop()!
+      groupedData.set(currentKey, {
+        ...lastPoint,
+        timestamp: currentKey
+      })
+    }
 
     return Array.from(groupedData.values())
   }

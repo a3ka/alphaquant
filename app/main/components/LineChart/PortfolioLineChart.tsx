@@ -62,7 +62,17 @@ export function PortfolioLineChart({
     }
 
     if (timeRange === '1M') {
-      return Math.max(1, Math.floor(chartData.length / 6))
+      const uniqueDaysCount = dataInfo.uniqueDates.size
+      const hoursInDay = 24
+      
+      if (uniqueDaysCount <= 14) {
+        // Если дней меньше или равно 14, показываем все дни
+        return Math.floor(chartData.length / uniqueDaysCount)
+      } else {
+        // Иначе вычисляем оптимальный интервал для 14 точек
+        const interval = Math.ceil(uniqueDaysCount / 14)
+        return Math.floor(chartData.length / (uniqueDaysCount / interval))
+      }
     }
 
     return Math.max(1, Math.floor(chartData.length / (typeof config.axisPoints === 'number' ? config.axisPoints : 12)))
