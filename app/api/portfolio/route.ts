@@ -19,10 +19,15 @@ export async function POST(req: Request) {
       description
     )
     
+    if (!portfolio) {
+      throw new Error('Failed to create portfolio')
+    }
+    
     return NextResponse.json(portfolio)
   } catch (error: any) {
+    console.error('Portfolio creation error:', error)
     return NextResponse.json(
-      { error: error.message },
+      { error: error.message || 'Internal server error' },
       { status: 500 }
     )
   }

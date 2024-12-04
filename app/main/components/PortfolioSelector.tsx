@@ -96,6 +96,7 @@ export function PortfolioSelector({
 
   const handleCreatePortfolio = async () => {
     if (!user?.id || !newPortfolioName) return
+    
     try {
       const response = await fetch('/api/portfolio', {
         method: 'POST',
@@ -108,25 +109,28 @@ export function PortfolioSelector({
         })
       })
       
-      if (!response.ok) throw new Error('Failed to create portfolio')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create portfolio')
+      }
+      
       const newPortfolio = await response.json()
       
       setPortfolios(prev => {
         const withoutFake = prev.filter(p => p.id !== 'fake-portfolio')
         return [FakePortfolio, ...withoutFake, newPortfolio]
       })
+      
       setSelectedPortfolio(newPortfolio)
       onPortfolioChange(newPortfolio)
       
       setIsAddPortfolioOpen(false)
-      setNewPortfolioName('')
-      setPortfolioDescription('')
-      setPortfolioType('SPOT')
+      resetCreatePortfolioForm()
       
       toast.success('Portfolio created successfully')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create portfolio:', error)
-      toast.error('Failed to create portfolio')
+      toast.error(error.message || 'Failed to create portfolio')
     }
   }
 

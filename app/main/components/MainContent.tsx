@@ -117,8 +117,8 @@ export function MainContent() {
     )
   }
 
-  // Если нет активов, показываем EmptyPortfolioState
-  if (!hasAssets) {
+  // Если портфель пустой и загрузка завершена, показываем EmptyPortfolioState
+  if (isEmptyPortfolio && !isLoading) {
     return (
       <EmptyPortfolioState 
         onAddTransaction={() => setIsAddTransactionOpen(true)}
