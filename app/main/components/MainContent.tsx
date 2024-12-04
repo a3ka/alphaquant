@@ -47,7 +47,11 @@ export function MainContent() {
   const currentSelectedAsset = selectedAsset
   const isLoading = chartLoading || !assets
 
-  const isEmptyPortfolio = !isLoading && (!assets || assets.length === 0)
+  const isEmptyPortfolio = !isLoading && (
+    !assets || 
+    assets.length === 0 || 
+    (selectedPortfolio?.id !== 'fake-portfolio' && (!chartData || chartData.length === 0))
+  )
 
   // Проверяем есть ли активы в портфеле
   const hasAssets = assets && assets.length > 0
@@ -89,7 +93,7 @@ export function MainContent() {
     }
   }, [selectedPortfolio, mutateAssets, mutateChart, setSelectedAsset])
 
-  // Инициализация первого портфеля
+  // Инициализация первго портфеля
   useEffect(() => {
     if (!selectedPortfolio) {
       handlePortfolioChange(FakePortfolio)
