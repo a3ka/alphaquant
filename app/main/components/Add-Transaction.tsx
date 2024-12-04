@@ -77,7 +77,7 @@ export function AddTransactionDialog({
   }, [user?.id])
 
   const [transactionType, setTransactionType] = useState<'buy' | 'sell' | 'transfer'>('buy')
-  const [portfolio, setPortfolio] = useState<string>('')
+  const [portfolio, setPortfolio] = useState<string>(selectedPortfolioId)
   const [sourcePortfolio, setSourcePortfolio] = useState<string>('')
   const [targetPortfolio, setTargetPortfolio] = useState<string>('')
   const [selectedCoin, setSelectedCoin] = useState("")
@@ -97,7 +97,13 @@ export function AddTransactionDialog({
   const [isAddStablecoinOpen, setIsAddStablecoinOpen] = useState(false)
 
   useEffect(() => {
-    if (portfolios.length > 0) {
+    if (selectedPortfolioId) {
+      setPortfolio(selectedPortfolioId)
+    }
+  }, [selectedPortfolioId, open])
+
+  useEffect(() => {
+    if (portfolios.length > 0 && !portfolio) {
       const realPortfolio = portfolios.find(p => p.id !== 'fake-portfolio')
       if (realPortfolio) {
         const portfolioId = realPortfolio.id.toString()
@@ -106,11 +112,7 @@ export function AddTransactionDialog({
         setTargetPortfolio(portfolioId)
       }
     }
-  }, [portfolios])
-
-  useEffect(() => {
-    setPortfolio(selectedPortfolioId)
-  }, [selectedPortfolioId])
+  }, [portfolios, portfolio])
 
   const handleTransactionTypeChange = (type: 'buy' | 'sell' | 'transfer') => {
     setTransactionType(type)
