@@ -75,6 +75,19 @@ export function PortfolioLineChart({
       }
     }
 
+    if (timeRange === '3M') {
+      const uniqueDaysCount = dataInfo.uniqueDates.size
+      if (uniqueDaysCount <= 14) {
+        // Если дней меньше или равно 14, показываем все дни
+        return Math.floor(chartData.length / uniqueDaysCount)
+      } else {
+        // Для периода больше 14 дней группируем по неделям
+        const weeksCount = Math.ceil(uniqueDaysCount / 7)
+        const interval = Math.ceil(weeksCount / 14) * 7 // Округляем до целых недель
+        return Math.floor(chartData.length / (uniqueDaysCount / interval))
+      }
+    }
+
     return Math.max(1, Math.floor(chartData.length / (typeof config.axisPoints === 'number' ? config.axisPoints : 12)))
   }
 
