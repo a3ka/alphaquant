@@ -239,6 +239,99 @@ export const formatChartData = (
     return Array.from(groupedData.values())
   }
 
+  if (timeRange === '6M') {
+    const now = new Date()
+    const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000)
+    const filteredData = sortedData.filter(point => 
+      new Date(point.timestamp) >= sixMonthsAgo
+    )
+
+    // Группируем данные
+    const groupedData = new Map<string, ChartDataPoint>()
+    const uniqueDaysCount = dataInfo.uniqueDates.size
+
+    filteredData.forEach(point => {
+      const date = new Date(point.timestamp)
+      
+      if (uniqueDaysCount <= 14) {
+        // Если дней меньше 14, группируем по дням
+        date.setHours(0, 0, 0, 0)
+      } else {
+        // Группируем по 2 недели
+        const weekNumber = Math.floor(date.getDate() / 14)
+        date.setDate(1) // Устанавливаем на начало месяца
+        date.setDate(weekNumber * 14) // Устанавливаем на начало двухнедельного периода
+        date.setHours(0, 0, 0, 0)
+      }
+      
+      const key = date.toISOString()
+      if (!groupedData.has(key)) {
+        groupedData.set(key, {
+          ...point,
+          timestamp: date.toISOString()
+        })
+      }
+    })
+
+    return Array.from(groupedData.values())
+  }
+
+  if (timeRange === '1Y') {
+    const now = new Date()
+    const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
+    const filteredData = sortedData.filter(point => 
+      new Date(point.timestamp) >= yearAgo
+    )
+
+    // Группируем данные
+    const groupedData = new Map<string, ChartDataPoint>()
+    const uniqueDaysCount = dataInfo.uniqueDates.size
+
+    filteredData.forEach(point => {
+      const date = new Date(point.timestamp)
+      
+      if (uniqueDaysCount <= 14) {
+        // Если дней меньше 14, группируем по дням
+        date.setHours(0, 0, 0, 0)
+      } else {
+        // Группируем по месяцам
+        date.setDate(1)
+        date.setHours(0, 0, 0, 0)
+      }
+      
+      const key = date.toISOString()
+      if (!groupedData.has(key)) {
+        groupedData.set(key, {
+          ...point,
+          timestamp: date.toISOString()
+        })
+      }
+    })
+
+    return Array.from(groupedData.values())
+  }
+
+  if (timeRange === 'ALL') {
+    // Группируем данные по месяцам
+    const groupedData = new Map<string, ChartDataPoint>()
+
+    sortedData.forEach(point => {
+      const date = new Date(point.timestamp)
+      date.setDate(1) // Устанавливаем на начало месяца
+      date.setHours(0, 0, 0, 0)
+      
+      const key = date.toISOString()
+      if (!groupedData.has(key)) {
+        groupedData.set(key, {
+          ...point,
+          timestamp: date.toISOString()
+        })
+      }
+    })
+
+    return Array.from(groupedData.values())
+  }
+
   // Для остальных периодов группируем по интервалу из конфигурации
   const groupedData = new Map<string, ChartDataPoint>()
   sortedData.forEach(point => {

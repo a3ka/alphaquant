@@ -88,6 +88,36 @@ export function PortfolioLineChart({
       }
     }
 
+    if (timeRange === '6M') {
+      const uniqueDaysCount = dataInfo.uniqueDates.size
+      if (uniqueDaysCount <= 14) {
+        // Если дней меньше или равно 14, показываем все дни
+        return Math.floor(chartData.length / uniqueDaysCount)
+      } else {
+        // Группируем по двухнедельным интервалам
+        const twoWeekPeriods = Math.ceil(uniqueDaysCount / 14)
+        const interval = Math.ceil(twoWeekPeriods / 12) * 14 // Максимум 12 точек на оси
+        return Math.floor(chartData.length / (uniqueDaysCount / interval))
+      }
+    }
+
+    if (timeRange === '1Y') {
+      const uniqueDaysCount = dataInfo.uniqueDates.size
+      if (uniqueDaysCount <= 14) {
+        return Math.floor(chartData.length / uniqueDaysCount)
+      } else {
+        // Показываем помесячно
+        const monthsCount = Math.ceil(uniqueDaysCount / 30)
+        return Math.floor(chartData.length / monthsCount)
+      }
+    }
+
+    if (timeRange === 'ALL') {
+      // Для ALL всегда группируем по месяцам
+      const monthsCount = Math.ceil(dataInfo.uniqueDates.size / 30)
+      return Math.floor(chartData.length / monthsCount)
+    }
+
     return Math.max(1, Math.floor(chartData.length / (typeof config.axisPoints === 'number' ? config.axisPoints : 12)))
   }
 
