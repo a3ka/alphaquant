@@ -2,7 +2,10 @@
 CREATE TYPE "PortfolioType" AS ENUM ('SPOT', 'MARGIN');
 
 -- CreateEnum
-CREATE TYPE "TransactionType" AS ENUM ('BUY', 'SELL', 'TRANSFER_TO_MARGIN', 'TRANSFER_FROM_MARGIN', 'MARGIN_BUY', 'MARGIN_SELL');
+CREATE TYPE "TransactionType" AS ENUM ('BUY', 'SELL', 'MARGIN_BUY', 'MARGIN_SELL', 'TRANSFER');
+
+-- CreateEnum
+CREATE TYPE "Period" AS ENUM ('CURRENT', 'MINUTE_15', 'HOUR_1', 'HOUR_4', 'HOUR_24');
 
 -- CreateTable
 CREATE TABLE "user" (
@@ -14,7 +17,6 @@ CREATE TABLE "user" (
     "gender" TEXT,
     "profile_image_url" TEXT,
     "user_id" TEXT NOT NULL,
-    "subscription" TEXT,
 
     CONSTRAINT "user_pkey" PRIMARY KEY ("id")
 );
@@ -103,14 +105,19 @@ CREATE TABLE "crypto_transaction" (
     "transaction_time" TIMESTAMP(3) NOT NULL,
     "portfolio_id" INTEGER NOT NULL,
     "user_id" TEXT NOT NULL,
+    "type" "TransactionType" NOT NULL,
     "coin_name" TEXT NOT NULL,
     "coin_ticker" TEXT NOT NULL,
     "amount" DOUBLE PRECISION NOT NULL,
-    "borrowed" DOUBLE PRECISION,
-    "price_usd" DOUBLE PRECISION NOT NULL,
-    "total_usd" DOUBLE PRECISION NOT NULL,
-    "type" "TransactionType" NOT NULL,
     "notes" TEXT,
+    "payment_method" TEXT,
+    "payment_price" DOUBLE PRECISION,
+    "payment_total" DOUBLE PRECISION,
+    "price_usd" DOUBLE PRECISION,
+    "total_usd" DOUBLE PRECISION,
+    "borrowed_amount" DOUBLE PRECISION,
+    "borrowed_asset" TEXT,
+    "target_portfolio_id" INTEGER,
 
     CONSTRAINT "crypto_transaction_pkey" PRIMARY KEY ("id")
 );
@@ -122,10 +129,38 @@ CREATE TABLE "portfolio_balance" (
     "portfolio_id" INTEGER NOT NULL,
     "coin_ticker" TEXT NOT NULL,
     "amount" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "borrowed" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "borrowed" BOOLEAN NOT NULL DEFAULT false,
     "in_collateral" DOUBLE PRECISION NOT NULL DEFAULT 0,
 
     CONSTRAINT "portfolio_balance_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "crypto_metadata" (
+    "id" SERIAL NOT NULL,
+    "coin_id" TEXT NOT NULL,
+    "symbol" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "logo" TEXT,
+    "market_cap_rank" INTEGER,
+    "current_price" DOUBLE PRECISION,
+    "price_change_24h" DOUBLE PRECISION,
+    "ath" DOUBLE PRECISION,
+    "ath_date" TIMESTAMP(3),
+    "last_updated" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "crypto_metadata_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "portfolio_history" (
+    "id" SERIAL NOT NULL,
+    "portfolio_id" INTEGER NOT NULL,
+    "total_value" DOUBLE PRECISION NOT NULL,
+    "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "period" "Period" NOT NULL,
+
+    CONSTRAINT "portfolio_history_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -136,6 +171,18 @@ CREATE UNIQUE INDEX "user_user_id_key" ON "user"("user_id");
 
 -- CreateIndex
 CREATE INDEX "user_user_id_idx" ON "user"("user_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "subscriptions_subscription_id_key" ON "subscriptions"("subscription_id");
+
+-- CreateIndex
+CREATE INDEX "subscriptions_user_id_idx" ON "subscriptions"("user_id");
+
+-- CreateIndex
+CREATE INDEX "subscriptions_plan_id_idx" ON "subscriptions"("plan_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "subscriptions_plans_plan_id_key" ON "subscriptions_plans"("plan_id");
 
 -- CreateIndex
 CREATE INDEX "user_portfolio_user_id_idx" ON "user_portfolio"("user_id");
@@ -156,7 +203,25 @@ CREATE INDEX "crypto_transaction_transaction_time_idx" ON "crypto_transaction"("
 CREATE INDEX "portfolio_balance_portfolio_id_idx" ON "portfolio_balance"("portfolio_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "portfolio_balance_portfolio_id_coin_ticker_key" ON "portfolio_balance"("portfolio_id", "coin_ticker");
+CREATE UNIQUE INDEX "portfolio_balance_portfolio_id_coin_ticker_borrowed_key" ON "portfolio_balance"("portfolio_id", "coin_ticker", "borrowed");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "crypto_metadata_coin_id_key" ON "crypto_metadata"("coin_id");
+
+-- CreateIndex
+CREATE INDEX "crypto_metadata_symbol_idx" ON "crypto_metadata"("symbol");
+
+-- CreateIndex
+CREATE INDEX "portfolio_history_portfolio_id_timestamp_idx" ON "portfolio_history"("portfolio_id", "timestamp");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "portfolio_history_portfolio_id_period_timestamp_key" ON "portfolio_history"("portfolio_id", "period", "timestamp");
+
+-- AddForeignKey
+ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("user_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_plan_id_fkey" FOREIGN KEY ("plan_id") REFERENCES "subscriptions_plans"("plan_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "user_portfolio" ADD CONSTRAINT "user_portfolio_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("user_id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -169,3 +234,6 @@ ALTER TABLE "crypto_transaction" ADD CONSTRAINT "crypto_transaction_user_id_fkey
 
 -- AddForeignKey
 ALTER TABLE "portfolio_balance" ADD CONSTRAINT "portfolio_balance_portfolio_id_fkey" FOREIGN KEY ("portfolio_id") REFERENCES "user_portfolio"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "portfolio_history" ADD CONSTRAINT "portfolio_history_portfolio_id_fkey" FOREIGN KEY ("portfolio_id") REFERENCES "user_portfolio"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

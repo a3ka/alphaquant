@@ -144,6 +144,7 @@ model crypto_transaction {
   price_usd        Float?          // Цена в USD на момент транзакции
   total_usd        Float?          // Общая сумма в USD
   borrowed_amount  Float?          // Количество заемных монет (для шорта или маржинальной торговли)
+  borrowed_asset   String?         // Тип заемного актива (например, USDT или BTC)
   
   // Поля для TRANSFER
   target_portfolio_id Int?         // Только для TRANSFER
@@ -163,12 +164,12 @@ model portfolio_balance {
   portfolio_id    Int
   coin_ticker     String
   amount          Float         @default(0)
-  borrowed        Float         @default(0)
+  borrowed        Boolean       @default(false)
   in_collateral   Float         @default(0)
 
   portfolio       user_portfolio @relation(fields: [portfolio_id], references: [id])
 
-  @@unique([portfolio_id, coin_ticker])
+  @@unique([portfolio_id, coin_ticker, borrowed])
   @@index([portfolio_id])
 }
 
