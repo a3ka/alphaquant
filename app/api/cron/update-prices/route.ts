@@ -44,16 +44,21 @@ export async function GET(request: NextRequest) {
     }
 
     // Получаем все активные портфели и обновляем их
+    console.log('Fetching all active portfolios...')
     const portfolios = await portfolioService.getAllActivePortfolios()
+    console.log(`Fetched ${portfolios.length} active portfolios`)
+
     const periodsToUpdate = portfolioService.getPeriodsToUpdate(
       new Date().getMinutes(), 
       new Date().getHours()
     )
-    
+    console.log('Periods to update:', periodsToUpdate)
+
     const result = await portfolioService.processPortfoliosInParallel(
       portfolios,
       periodsToUpdate
     )
+    console.log('Portfolios processed:', result)
 
     // Очищаем старые записи
     console.log('Starting cleanup of old history records...')
