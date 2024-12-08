@@ -55,6 +55,7 @@ export const transactionService = {
             data.portfolioId,
             data.coinTicker,
             -data.amount,
+            false,
             false
           )
           if (data.targetPortfolioId) {
@@ -62,6 +63,7 @@ export const transactionService = {
               data.targetPortfolioId,
               data.coinTicker,
               data.amount,
+              false,
               false
             )
             await portfolioService.updatePortfolioData(data.targetPortfolioId)
@@ -74,6 +76,7 @@ export const transactionService = {
           data.portfolioId,
           data.coinTicker,
           amountChange,
+          isMargin,
           isMargin
         )
       }

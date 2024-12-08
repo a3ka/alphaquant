@@ -127,7 +127,8 @@ export const portfolioService = {
     portfolioId: PortfolioId,
     coinTicker: string,
     amount: number,
-    isMargin: boolean
+    isMargin: boolean,
+    borrowed: boolean
   ) {
     try {
       const supabase = await createServerSupabaseClient();
@@ -148,10 +149,11 @@ export const portfolioService = {
           portfolio_id: portfolioId,
           coin_ticker: coinTicker,
           amount: amount,
+          borrowed: borrowed,
           in_collateral: isMargin ? amount : 0,
           last_updated: new Date().toISOString()
         }, {
-          onConflict: 'portfolio_id,coin_ticker'
+          onConflict: 'portfolio_id,coin_ticker,borrowed'
         });
   
       if (error) throw error;
